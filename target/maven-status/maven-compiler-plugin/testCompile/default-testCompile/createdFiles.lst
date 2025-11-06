@@ -1,0 +1,12 @@
+com\hku\hkuaiagent\agent\HkuManusTest.class
+com\hku\hkuaiagent\tools\FileOperationToolTest.class
+com\hku\hkuaiagent\tools\TerminalOperationToolTest.class
+com\hku\hkuaiagent\demo\rag\MultiQueryExpanderDemoTest.class
+com\hku\hkuaiagent\rag\PgVectorVectorStoreConfigTest.class
+com\hku\hkuaiagent\tools\ResourceDownloadToolTest.class
+com\hku\hkuaiagent\HkuAiAgentApplicationTests.class
+com\hku\hkuaiagent\tools\WebSearchToolTest.class
+com\hku\hkuaiagent\rag\LoveAppDocumentLoaderTest.class
+com\hku\hkuaiagent\tools\WebScrapingToolTest.class
+com\hku\hkuaiagent\app\LoveAppTest.class
+com\hku\hkuaiagent\tools\PDFGenerationToolTest.class

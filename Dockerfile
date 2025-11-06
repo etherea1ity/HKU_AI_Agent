@@ -13,4 +13,4 @@ RUN mvn clean package -DskipTests
 EXPOSE 8123
 
 # 使用生产环境配置启动应用
-CMD ["java", "-jar", "/app/target/yu-ai-agent-0.0.1-SNAPSHOT.jar", "--spring.profiles.active=prod"]
+CMD ["java", "-jar", "/app/target/hku-ai-agent-0.0.1-SNAPSHOT.jar", "--spring.profiles.active=prod"]
