@@ -1,8 +1,8 @@
 <template>
   <div class="love-master-container">
     <div class="header">
-      <div class="back-button" @click="goBack">返回</div>
-      <h1 class="title">AI恋爱大师</h1>
+  <div class="back-button" @click="goBack">返回</div>
+  <h1 class="title">HKU Campus Companion</h1>
       <div class="chat-id">会话ID: {{ chatId }}</div>
     </div>
     
@@ -33,15 +33,15 @@ import { chatWithLoveApp } from '../api'
 
 // 设置页面标题和元数据
 useHead({
-  title: 'AI恋爱大师 - HKU AI Agent 平台',
+  title: 'HKU Campus Companion - HKU AI Agent Platform',
   meta: [
     {
       name: 'description',
-      content: 'AI恋爱大师是 HKU AI Agent 平台的专业情感顾问，帮你解答各种恋爱问题，提供情感建议'
+      content: 'HKU Campus Companion is the HKU AI Agent platform assistant for campus enquiries, offering guidance on courses, administration, and student life.'
     },
     {
       name: 'keywords',
-      content: 'AI恋爱大师,情感顾问,恋爱咨询,AI聊天,情感问题,HKU,AI智能体'
+      content: 'HKU, campus assistant, course advisory, administration, student life, AI chat, HKU AI Agent'
     }
   ]
 })
@@ -54,7 +54,7 @@ let eventSource = null
 
 // 生成随机会话ID
 const generateChatId = () => {
-  return 'love_' + Math.random().toString(36).substring(2, 10)
+  return 'campus_' + Math.random().toString(36).substring(2, 10)
 }
 
 // 添加消息到列表
@@ -117,7 +117,7 @@ onMounted(() => {
   chatId.value = generateChatId()
   
   // 添加欢迎消息
-  addMessage('欢迎来到AI恋爱大师，请告诉我你的恋爱问题，我会尽力给予帮助和建议。', false)
+  addMessage('欢迎来到 HKU Campus Companion。我可以协助你查询课程安排、行政流程、校园设施与最新公告，有任何 HKU 相关问题都可以告诉我。', false)
 })
 
 // 组件销毁前关闭SSE连接
@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #fff9f9;
+  background-color: #f4f7ff;
 }
 
 .header {
@@ -141,7 +141,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background-color: #ff6b8b;
+  background-color: #0b5ba6;
   color: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: sticky;
