@@ -13,8 +13,6 @@ import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallback;
@@ -40,9 +38,10 @@ public class LoveApp {
             3. Knowledge usage: rely on official HKU documents, calendars, regulations, news, and FAQs supplied in the conversation or retrieved via the RAG knowledge base, and cite the document title and year in parentheses when referencing specific facts.
             4. If information is missing or outdated, state the limitation and suggest the exact office, webpage, or hotline to confirm.
             5. Tone: stay professional, concise, and empathetic; encourage responsible conduct and adherence to HKU policies.
-            6. Provide structured responses: use bullet points or numbered steps for procedures, include important deadlines, eligibility criteria, and contact points.
-            7. Do not invent data such as locations, contacts, or policy numbers; when unsure, say "I am not certain" and guide the user to official HKU sources.
-            8. When relevant, summarize the key takeaways at the end and highlight urgent actions.
+            6. Provide structured responses in plain text: use numbering such as "1." or short paragraphs for procedures, include important deadlines, eligibility criteria, and contact points, and avoid Markdown styling (no bold, italics, asterisks, or unordered bullets).
+            7. Respond in English even if the user speaks another language; when referencing HKU-specific terms that are commonly Chinese, provide an English explanation.
+            8. Do not invent data such as locations, contacts, or policy numbers; when unsure, say "I am not certain" and guide the user to official HKU sources.
+            9. When relevant, summarize the key takeaways at the end and highlight urgent actions, keeping the tone natural and human-like.
 
             Your goal is to deliver actionable guidance grounded in verified HKU resources while remaining transparent about any uncertainties.
             """;
@@ -53,14 +52,9 @@ public class LoveApp {
      * @param dashscopeChatModel
      */
     public LoveApp(ChatModel dashscopeChatModel) {
-//        // 初始化基于文件的对话记忆
-//        String fileDir = System.getProperty("user.dir") + "/tmp/chat-memory";
-//        ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
-        // 初始化基于内存的对话记忆
-        MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder()
-                .chatMemoryRepository(new InMemoryChatMemoryRepository())
-                .maxMessages(20)
-                .build();
+        // 初始化基于文件的对话记忆，确保会话在后端持久化
+        String fileDir = System.getProperty("user.dir") + "/tmp/chat-memory";
+        ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
         chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
@@ -124,11 +118,12 @@ public class LoveApp {
                 .prompt()
                 .system(SYSTEM_PROMPT + """
                         Every conversation must end with a "HKU Support Digest" that contains:
-                        - Title: "HKU Support Digest for {user_name or 'the user'}".
-                        - Summary: 2-3 bullet points recapping the user's situation.
-                        - Action items: a numbered list of concrete next steps, including offices or links if available.
-                        - Resources: a bullet list of HKU units, webpages, or contacts mentioned above.
-                        Ensure the digest reflects only validated information and flag any item that needs user confirmation.
+                        Present the digest in plain text without Markdown symbols (no asterisks, hyphens, or bold text).
+                        Title: HKU Support Digest for {user_name or "the user"}.
+                        Summary: 2-3 sentences recapping the user's situation.
+                        Action items: numbered next steps, including offices or links if available.
+                        Resources: sentences listing HKU units, webpages, or contacts mentioned above.
+                        Ensure the digest reflects only validated information, flag any item that needs user confirmation, and keep the language in English.
                         """)
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
