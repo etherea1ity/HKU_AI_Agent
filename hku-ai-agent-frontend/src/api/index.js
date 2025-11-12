@@ -50,8 +50,8 @@ export const chatWithLoveApp = (message, chatId) => {
 }
 
 // AI超级智能体聊天
-export const chatWithManus = (message) => {
-  return connectSSE('/ai/manus/chat', { message })
+export const chatWithManus = (message, chatId = 'default') => {
+  return connectSSE('/ai/manus/chat', { message, chatId })
 }
 
 export default {

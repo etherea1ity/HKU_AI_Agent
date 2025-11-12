@@ -12,7 +12,7 @@
           </div>
           <div class="message-bubble">
             <div class="message-content">
-              {{ msg.content }}
+              <span v-html="formatMessageContent(msg.content)"></span>
               <span v-if="connectionStatus === 'connecting' && index === messages.length - 1" class="typing-indicator">▋</span>
             </div>
             <div class="message-time">{{ formatTime(msg.time) }}</div>
@@ -95,6 +95,86 @@ const sendMessage = () => {
 const formatTime = (timestamp) => {
   const date = new Date(timestamp)
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+// 格式化消息内容，将链接转换为可点击的超链接
+const formatMessageContent = (content) => {
+  if (!content) return ''
+  
+  // 替换无法正确显示的emoji为常用的文本表情
+  // 将常见的emoji字符替换为对应的文本表情
+  let processedContent = content
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, '😊')  // 表情符号
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')    // 各种符号
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')    // 交通工具
+    .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')    // 补充符号
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')      // 杂项符号
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')      // 装饰符号
+  
+  // 先提取下载链接（在转义之前），避免标记被转义
+  let downloadButtons = []
+  processedContent = processedContent.replace(
+    /\[DOWNLOAD_LINK\](.*?)\[\/DOWNLOAD_LINK\]/g,
+    (match, url) => {
+      const placeholder = `__DOWNLOAD_BTN_${downloadButtons.length}__`
+      downloadButtons.push(url.trim())
+      return placeholder
+    }
+  )
+  
+  // 转义HTML特殊字符（防止XSS攻击）
+  let escapedContent = processedContent
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+  
+  // 将换行符转换为<br>
+  escapedContent = escapedContent.replace(/\n/g, '<br>')
+  
+  // 恢复下载按钮（不需要转义URL，因为它们在href中）
+  downloadButtons.forEach((url, index) => {
+    const placeholder = `__DOWNLOAD_BTN_${index}__`
+    const safeUrl = url.replace(/&amp;/g, '&') // 确保&没有被重复转义
+    escapedContent = escapedContent.replace(
+      placeholder,
+      `<a href="${safeUrl}" target="_blank" class="download-btn" download>📥 点击下载PDF</a>`
+    )
+  })
+  
+  // 检测并转换一般的URL链接
+  const urlRegex = /(https?:\/\/[^\s<]+)/g
+  escapedContent = escapedContent.replace(urlRegex, (url) => {
+    // 跳过已经在<a>标签中的URL
+    if (escapedContent.indexOf(`href="${url}"`) !== -1) {
+      return url
+    }
+    
+    // 移除URL末尾的标点符号（如 ), ], ., , 等）
+    const punctuationRegex = /[)\].,;:!?]+$/
+    const match = url.match(punctuationRegex)
+    let cleanUrl = url
+    let trailingPunctuation = ''
+    
+    if (match) {
+      trailingPunctuation = match[0]
+      cleanUrl = url.slice(0, -trailingPunctuation.length)
+    }
+    
+    return `<a href="${cleanUrl}" target="_blank" class="link" rel="noopener noreferrer">${cleanUrl}</a>${trailingPunctuation}`
+  })
+  
+  // 支持简单的Markdown格式
+  // 粗体 **text**
+  escapedContent = escapedContent.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  
+  // 标题 # text
+  escapedContent = escapedContent.replace(/^### (.+)$/gm, '<h4>$1</h4>')
+  escapedContent = escapedContent.replace(/^## (.+)$/gm, '<h3>$1</h3>')
+  escapedContent = escapedContent.replace(/^# (.+)$/gm, '<h2>$1</h2>')
+  
+  return escapedContent
 }
 
 // 自动滚动到底部
@@ -224,6 +304,74 @@ onMounted(() => {
   font-size: 16px;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+/* 链接样式 */
+.message-content :deep(a.link) {
+  color: #1976d2;
+  text-decoration: none;
+  transition: all 0.2s;
+  border-bottom: 1px solid transparent;
+}
+
+.message-content :deep(a.link:hover) {
+  color: #1565c0;
+  border-bottom-color: #1565c0;
+}
+
+/* 下载按钮样式 */
+.message-content :deep(a.download-btn) {
+  display: inline-block;
+  padding: 12px 24px;
+  margin: 16px 0 8px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white !important;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  cursor: pointer;
+}
+
+.message-content :deep(a.download-btn:hover) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+  background: linear-gradient(135deg, #7c8ef5 0%, #8a5ab3 100%);
+}
+
+.message-content :deep(a.download-btn:active) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+}
+
+.message-content :deep(strong) {
+  font-weight: 600;
+  color: #333;
+}
+
+.message-content :deep(h2),
+.message-content :deep(h3),
+.message-content :deep(h4) {
+  margin: 12px 0 8px 0;
+  font-weight: 600;
+}
+
+.message-content :deep(h2) {
+  font-size: 1.3em;
+  color: #1976d2;
+}
+
+.message-content :deep(h3) {
+  font-size: 1.2em;
+  color: #333;
+}
+
+.message-content :deep(h4) {
+  font-size: 1.1em;
+  color: #666;
 }
 
 .message-time {

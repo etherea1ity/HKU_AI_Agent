@@ -34,6 +34,9 @@ public class AiController {
     // MCP服务
     @Resource
     private ToolCallbackProvider toolCallbackProvider;
+    
+    // 缓存 HkuManus 实例，按 chatId 存储（添加对话记忆支持）
+    private final java.util.Map<String, HkuManus> manusCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * 同步调用 AI 恋爱大师应用
@@ -103,16 +106,42 @@ public class AiController {
     }
 
     /**
-     * 流式调用 Manus 超级智能体
+     * 流式调用 Manus 超级智能体（支持对话记忆）
      *
-     * @param message
-     * @return
+     * @param message 用户消息
+     * @param chatId 会话ID（用于区分不同对话，支持多轮对话记忆）
+     * @return SSE流式响应
      */
     @GetMapping("/manus/chat")
-    public SseEmitter doChatWithManus(String message) {
-        log.info("[AiController] Manus");
-    HkuManus hkuManus = new HkuManus(allTools, toolCallbackProvider, dashscopeChatModel);
-    return hkuManus.runStream(message);
+    public SseEmitter doChatWithManus(String message, String chatId) {
+        log.info("[AiController] Manus - chatId: {}", chatId);
+        
+        // 如果没有提供 chatId，生成一个默认的
+        if (chatId == null || chatId.isEmpty()) {
+            chatId = "default";
+        }
+        
+        // 从缓存中获取或创建新的 HkuManus 实例
+        HkuManus hkuManus = manusCache.computeIfAbsent(chatId, 
+            id -> new HkuManus(allTools, toolCallbackProvider, dashscopeChatModel));
+        
+        return hkuManus.runStream(message);
+    }
+    
+    /**
+     * 清除指定会话的对话历史
+     *
+     * @param chatId 会话ID
+     * @return 清除结果
+     */
+    @GetMapping("/manus/clear")
+    public String clearManusChat(String chatId) {
+        if (chatId == null || chatId.isEmpty()) {
+            chatId = "default";
+        }
+        manusCache.remove(chatId);
+        log.info("[AiController] Cleared chat history for chatId: {}", chatId);
+        return "对话历史已清除";
     }
 }
 

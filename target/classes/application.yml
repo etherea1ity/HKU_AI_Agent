@@ -19,7 +19,7 @@ spring:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
       chat:
         model: text-embedding-v3
-# 临时注释掉，便于大家开发调试和部署（实际需要启动 MCP 服务）
+# 这里需要开启MCP，才能读取到mcp-servers.json文件并加载MCP服务
     mcp:
       client:
         stdio:

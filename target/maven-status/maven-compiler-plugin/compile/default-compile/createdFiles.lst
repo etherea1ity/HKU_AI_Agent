@@ -23,9 +23,10 @@ com\hku\hkuaiagent\rag\LoveAppVectorStoreConfig.class
 com\hku\hkuaiagent\rag\LoveAppContextualQueryAugmenterFactory.class
 com\hku\hkuaiagent\tools\TerminalOperationTool.class
 com\hku\hkuaiagent\tools\FileOperationTool.class
-com\hku\hkuaiagent\demo\invoke\SpringAiAiInvoke.class
+com\hku\hkuaiagent\controller\FileController.class
 com\hku\hkuaiagent\rag\PgVectorVectorStoreConfig.class
 com\hku\hkuaiagent\tools\WebScrapingTool.class
+com\hku\hkuaiagent\demo\invoke\SpringAiInvoke.class
 com\hku\hkuaiagent\controller\AiController.class
 com\hku\hkuaiagent\demo\rag\MultiQueryExpanderDemo.class
 com\hku\hkuaiagent\rag\LoveAppRagCloudAdvisorConfig.class

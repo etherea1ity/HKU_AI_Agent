@@ -3,6 +3,15 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
+      <profile name="Annotation profile for hku-ai-agent" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$PROJECT_DIR$/../../IntelliJ IDEA/apache-maven-3.9.11/mvn_repo/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
+        </processorPath>
+        <module name="hku-ai-agent" />
+      </profile>
       <profile name="Annotation profile for hku-image-search-mcp-server" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -12,21 +21,11 @@
         </processorPath>
         <module name="hku-image-search-mcp-server" />
       </profile>
-      <profile name="Annotation profile for hku-ai-agent" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$PROJECT_DIR$/../../IntelliJ IDEA/apache-maven-3.9.11/mvn_repo/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-          <entry name="$PROJECT_DIR$/../../IntelliJ IDEA/apache-maven-3.9.11/mvn_repo/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-        </processorPath>
-        <module name="HKU_AI_Agent" />
-      </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="HKU_AI_Agent" options="-parameters" />
+      <module name="hku-ai-agent" options="-parameters" />
       <module name="hku-image-search-mcp-server" options="-parameters" />
     </option>
   </component>
