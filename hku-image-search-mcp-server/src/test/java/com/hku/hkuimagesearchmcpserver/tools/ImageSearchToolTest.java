@@ -13,7 +13,7 @@ public class ImageSearchToolTest {
 
     @Test
     void searchImage() {
-        String result = imageSearchTool.searchImage("computer");
+        String result = imageSearchTool.searchImage("Hong Kong");
         Assertions.assertNotNull(result);
     }
 }

@@ -17,6 +17,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,8 +30,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ToolCallAgent extends ReActAgent {
 
-    // 可用的工具
+    // 可用的工具 8个
     private final ToolCallback[] availableTools;
+
+    // MCP工具
+    private final ToolCallbackProvider mcpToolProvider;
 
     // 保存工具调用信息的响应结果（要调用那些工具）
     private ChatResponse toolCallChatResponse;
@@ -41,15 +45,17 @@ public class ToolCallAgent extends ReActAgent {
     // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
     private final ChatOptions chatOptions;
 
-    public ToolCallAgent(ToolCallback[] availableTools) {
+    public ToolCallAgent(ToolCallback[] availableTools, ToolCallbackProvider mcpToolProvider) {
         super();
         this.availableTools = availableTools;
+        this.mcpToolProvider = mcpToolProvider;
         this.toolCallingManager = ToolCallingManager.builder().build();
         // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
         this.chatOptions = DashScopeChatOptions.builder()
                 .withInternalToolExecutionEnabled(false)
                 .build();
     }
+
 
     /**
      * 处理当前状态并决定下一步行动
@@ -69,7 +75,9 @@ public class ToolCallAgent extends ReActAgent {
         try {
             ChatResponse chatResponse = getChatClient().prompt(prompt)
                     .system(getSystemPrompt())
-                    .tools(availableTools)
+                    .toolCallbacks(availableTools)
+                    .toolCallbacks(mcpToolProvider)
+                    //.tools(availableTools)
                     .call()
                     .chatResponse();
             // 记录响应，用于等下 Act

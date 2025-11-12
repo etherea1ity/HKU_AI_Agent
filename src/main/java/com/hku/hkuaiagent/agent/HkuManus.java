@@ -4,6 +4,7 @@ import com.hku.hkuaiagent.advisor.MyLoggerAdvisor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,8 +13,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class HkuManus extends ToolCallAgent {
 
-        public HkuManus(ToolCallback[] allTools, ChatModel dashscopeChatModel) {
-        super(allTools);
+        public HkuManus(ToolCallback[] allTools, ToolCallbackProvider mcpTools, ChatModel dashscopeChatModel) {
+        super(allTools,mcpTools);
                 this.setName("hkuManus");
         String SYSTEM_PROMPT = """
                                 You are HkuManus, an all-capable AI assistant, aimed at solving any task presented by the user.
@@ -27,7 +28,8 @@ public class HkuManus extends ToolCallAgent {
                 If you want to stop the interaction at any point, use the `terminate` tool/function call.
                 """;
         this.setNextStepPrompt(NEXT_STEP_PROMPT);
-        this.setMaxSteps(20);
+        // 限定10次调用
+        this.setMaxSteps(10);
         // 初始化 AI 对话客户端
         ChatClient chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultAdvisors(new MyLoggerAdvisor())

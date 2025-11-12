@@ -3,8 +3,10 @@ package com.hku.hkuaiagent.controller;
 import com.hku.hkuaiagent.agent.HkuManus;
 import com.hku.hkuaiagent.app.LoveApp;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,7 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/ai")
+@Slf4j
 public class AiController {
 
     @Resource
@@ -28,6 +31,10 @@ public class AiController {
     @Resource
     private ChatModel dashscopeChatModel;
 
+    // MCP服务
+    @Resource
+    private ToolCallbackProvider toolCallbackProvider;
+
     /**
      * 同步调用 AI 恋爱大师应用
      *
@@ -37,6 +44,7 @@ public class AiController {
      */
     @GetMapping("/love_app/chat/sync")
     public String doChatWithLoveAppSync(String message, String chatId) {
+        log.info("[AiController] doChatWithLoveAppSync");
         return loveApp.doChat(message, chatId);
     }
 
@@ -49,6 +57,7 @@ public class AiController {
      */
     @GetMapping(value = "/love_app/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> doChatWithLoveAppSSE(String message, String chatId) {
+        log.info("[AiController] SSE");
         return loveApp.doChatByStream(message, chatId);
     }
 
@@ -61,6 +70,7 @@ public class AiController {
      */
     @GetMapping(value = "/love_app/chat/server_sent_event")
     public Flux<ServerSentEvent<String>> doChatWithLoveAppServerSentEvent(String message, String chatId) {
+        log.info("[AiController] Event");
         return loveApp.doChatByStream(message, chatId)
                 .map(chunk -> ServerSentEvent.<String>builder()
                         .data(chunk)
@@ -76,6 +86,7 @@ public class AiController {
      */
     @GetMapping(value = "/love_app/chat/sse_emitter")
     public SseEmitter doChatWithLoveAppServerSseEmitter(String message, String chatId) {
+        log.info("[AiController] Emitter");
         // 创建一个超时时间较长的 SseEmitter
         SseEmitter sseEmitter = new SseEmitter(180000L); // 3 分钟超时
         // 获取 Flux 响应式数据流并且直接通过订阅推送给 SseEmitter
@@ -99,7 +110,8 @@ public class AiController {
      */
     @GetMapping("/manus/chat")
     public SseEmitter doChatWithManus(String message) {
-    HkuManus hkuManus = new HkuManus(allTools, dashscopeChatModel);
+        log.info("[AiController] Manus");
+    HkuManus hkuManus = new HkuManus(allTools, toolCallbackProvider, dashscopeChatModel);
     return hkuManus.runStream(message);
     }
 }

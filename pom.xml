@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.hku</groupId>
-    <artifactId>hku-ai-agent</artifactId>
+    <artifactId>HKU_AI_Agent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>hku-ai-agent</name>
     <description>hku-ai-agent</description>

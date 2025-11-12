@@ -14,8 +14,7 @@ const request = axios.create({
 // 封装SSE连接
 export const connectSSE = (url, params, onMessage, onError) => {
   // 构建带参数的URL
-  const queryKeys = Object.keys(params).filter(key => params[key] !== undefined && params[key] !== null && params[key] !== '')
-  const queryString = queryKeys
+  const queryString = Object.keys(params)
     .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
     .join('&')
   
@@ -51,8 +50,8 @@ export const chatWithLoveApp = (message, chatId) => {
 }
 
 // AI超级智能体聊天
-export const chatWithManus = (message, chatId) => {
-  return connectSSE('/ai/manus/chat', { message, chatId })
+export const chatWithManus = (message) => {
+  return connectSSE('/ai/manus/chat', { message })
 }
 
 export default {

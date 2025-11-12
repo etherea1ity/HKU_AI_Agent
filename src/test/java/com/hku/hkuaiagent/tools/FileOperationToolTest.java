@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+//@SpringBootTest
 class FileOperationToolTest {
 
     @Test
@@ -13,6 +13,7 @@ class FileOperationToolTest {
         String fileName = "编程导航.txt";
         String result = fileOperationTool.readFile(fileName);
         Assertions.assertNotNull(result);
+        System.out.println(result);
     }
 
     @Test

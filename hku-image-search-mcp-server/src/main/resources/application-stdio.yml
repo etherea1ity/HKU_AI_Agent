@@ -2,7 +2,7 @@ spring:
   ai:
     mcp:
       server:
-  name: hku-image-search-mcp-server
+        name: hku-image-search-mcp-servers1.json-server
         version: 0.0.1
         type: SYNC
         # stdio

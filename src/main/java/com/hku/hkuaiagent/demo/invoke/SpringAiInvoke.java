@@ -1,9 +1,14 @@
 package com.hku.hkuaiagent.demo.invoke;
 
 import jakarta.annotation.Resource;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -12,14 +17,14 @@ import org.springframework.stereotype.Component;
  */
 // 取消注释后，项目启动时会执行
 //@Component
-public class SpringAiAiInvoke implements CommandLineRunner {
+public class SpringAiInvoke implements CommandLineRunner {
 
     @Resource
     private ChatModel dashscopeChatModel;
 
     @Override
     public void run(String... args) throws Exception {
-        AssistantMessage assistantMessage = dashscopeChatModel.call(new Prompt("你好，我是鱼皮"))
+        AssistantMessage assistantMessage = dashscopeChatModel.call(new Prompt("你是谁？一句话告诉我"))
                 .getResult()
                 .getOutput();
         System.out.println(assistantMessage.getText());
