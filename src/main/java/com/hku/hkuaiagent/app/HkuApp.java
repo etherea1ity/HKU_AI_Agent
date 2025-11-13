@@ -97,25 +97,56 @@ public class HkuApp {
         if (lower.contains("comp7103")) return doChatWithCoursePrefix(message, chatId, "COMP7103");
         if (lower.contains("comp7106")) return doChatWithCoursePrefix(message, chatId, "COMP7106");
 
-        /* 原逻辑保持不变 */
-        ChatResponse resp = chatClient.prompt()
-                .user(message)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
-                .advisors(new QuestionAnswerAdvisor(hkuAiVectorStore))
-                .advisors(HkuAiRagCustomAdvisorFactory.createHkuAiRagCustomAdvisor(hkuAiVectorStore, "course"))
-                .call()
-                .chatResponse();
-        return resp.getResult().getOutput().getText();
+    /* 原逻辑保持不变 */
+    var promptBuilder = chatClient.prompt()
+        .user(message)
+        .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId));
+
+    if (hkuAiVectorStore != null) {
+        promptBuilder = promptBuilder
+            .advisors(new QuestionAnswerAdvisor(hkuAiVectorStore))
+            .advisors(HkuAiRagCustomAdvisorFactory.createHkuAiRagCustomAdvisor(hkuAiVectorStore, "course"));
+    }
+
+    ChatResponse resp = promptBuilder
+        .call()
+        .chatResponse();
+
+    return resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+        ? resp.getResult().getOutput().getText()
+        : "";
     }
 
     public Flux<String> doChatByStream(String message, String chatId) {
-        return chatClient.prompt()
-                .user(message)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
-                .advisors(new QuestionAnswerAdvisor(hkuAiVectorStore))
-                .advisors(HkuAiRagCustomAdvisorFactory.createHkuAiRagCustomAdvisor(hkuAiVectorStore, "course"))
-                .stream()
-                .content();
+        String lower = message.toLowerCase();
+        if (lower.contains("semester 2") || lower.contains("s2") || lower.contains("second semester") || lower.contains("spring semester")) {
+            log.info("[走向] 强制拦截 semester 2 → 走 doChatWithRagStream");
+            return doChatWithRagStream(message, chatId);
+        }
+        if (lower.contains("semester 1") || lower.contains("s1") || lower.contains("first semester") || lower.contains("fall semester")) {
+            log.info("[走向] 强制拦截 semester 1 → 走 doChatWithRagStream");
+            return doChatWithRagStream(message, chatId);
+        }
+        if (lower.contains("comp7103")) {
+            return Flux.just(doChatWithCoursePrefix(message, chatId, "COMP7103"));
+        }
+        if (lower.contains("comp7106")) {
+            return Flux.just(doChatWithCoursePrefix(message, chatId, "COMP7106"));
+        }
+
+    var promptBuilder = chatClient.prompt()
+        .user(message)
+        .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId));
+
+    if (hkuAiVectorStore != null) {
+        promptBuilder = promptBuilder
+            .advisors(new QuestionAnswerAdvisor(hkuAiVectorStore))
+            .advisors(HkuAiRagCustomAdvisorFactory.createHkuAiRagCustomAdvisor(hkuAiVectorStore, "course"));
+    }
+
+    return promptBuilder
+        .stream()
+        .content();
     }
 
     /* ===================== 手动加载文档 + 前缀过滤（兼容 1.0.0） ===================== */
@@ -158,8 +189,16 @@ public class HkuApp {
     /* ===================== 带学期过滤的 RAG 入口（已放大 topK） ===================== */
 
     public String doChatWithRag(String message, String chatId) {
+        List<String> chunks = doChatWithRagStream(message, chatId).collectList().block();
+        if (chunks == null || chunks.isEmpty()) {
+            return "";
+        }
+        return String.join("", chunks);
+    }
+
+    public Flux<String> doChatWithRagStream(String message, String chatId) {
         if (hkuAiVectorStore == null) {
-            return "RAG 知识库未启用，请检查配置后重试。";
+            return Flux.just("RAG 知识库未启用，请检查配置后重试。");
         }
         String rewritten = queryRewriter != null ? queryRewriter.doQueryRewrite(message) : message;
 
@@ -179,15 +218,13 @@ public class HkuApp {
             promptBuilder = promptBuilder.system(SYSTEM_PROMPT + "\n\n" + manualContext);
         }
 
-        ChatResponse resp = promptBuilder
+        return promptBuilder
                 .user(rewritten)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(new MyLoggerAdvisor())
                 .advisors(advisor)
-                .call()
-                .chatResponse();
-
-        return resp.getResult().getOutput().getText();
+                .stream()
+                .content();
     }
 
     private String buildSemesterCourseContext(String semester) {
