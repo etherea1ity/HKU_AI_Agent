@@ -6,7 +6,7 @@ com\hku\hkuaiagent\rag\PgVectorVectorStoreConfigTest.class
 com\hku\hkuaiagent\tools\ResourceDownloadToolTest.class
 com\hku\hkuaiagent\HkuAiAgentApplicationTests.class
 com\hku\hkuaiagent\tools\WebSearchToolTest.class
-com\hku\hkuaiagent\rag\LoveAppDocumentLoaderTest.class
+com\hku\hkuaiagent\app\HkuAppTest.class
 com\hku\hkuaiagent\tools\WebScrapingToolTest.class
-com\hku\hkuaiagent\app\LoveAppTest.class
+com\hku\hkuaiagent\rag\HkuAiDocumentLoaderTest.class
 com\hku\hkuaiagent\tools\PDFGenerationToolTest.class

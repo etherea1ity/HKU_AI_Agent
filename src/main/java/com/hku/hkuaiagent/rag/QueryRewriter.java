@@ -7,9 +7,6 @@ import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransfo
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
 import org.springframework.stereotype.Component;
 
-/**
- * 查询重写器
- */
 @Component
 public class QueryRewriter {
 
@@ -17,24 +14,46 @@ public class QueryRewriter {
 
     public QueryRewriter(ChatModel dashscopeChatModel) {
         ChatClient.Builder builder = ChatClient.builder(dashscopeChatModel);
-        // 创建查询重写转换器
         queryTransformer = RewriteQueryTransformer.builder()
                 .chatClientBuilder(builder)
                 .build();
     }
 
     /**
-     * 执行查询重写
-     *
-     * @param prompt
-     * @return
+     * 入口：自动识别课程编号 + 学期（中英文）+ 课程前缀对比
      */
     public String doQueryRewrite(String prompt) {
+        if (prompt == null) return "";
+        String lower = prompt.toLowerCase();
+
+        /* ====== 1. 第二学期快速通道（中英文） ====== */
+        if (lower.contains("第二学期") ||
+                lower.contains("semester 2") ||
+                lower.contains("s2") ||
+                lower.contains("spring semester") ||   // ➕ 英文
+                lower.contains("second semester")) {   // ➕ 英文
+            return "List all courses offered in Semester 2 (2025-26S2) with course code, instructor, content summary, exam period and key differences.";
+        }
+
+        /* ====== 2. 第一学期快速通道（中英文） ====== */
+        if (lower.contains("第一学期") ||
+                lower.contains("semester 1") ||
+                lower.contains("s1") ||
+                lower.contains("fall semester") ||     // ➕ 英文
+                lower.contains("first semester")) {    // ➕ 英文
+            return "List all courses offered in Semester 1 (2025-26S1) with course code, instructor, content summary, exam period and key differences.";
+        }
+
+        /* ====== 3. 课程前缀识别（如 COMP7103）并触发对比 ====== */
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("\\b(comp\\d{4})[a-z]?\\b", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher m = p.matcher(lower);
+        if (m.find()) {
+            String prefix = m.group(1).toUpperCase(); // 如 COMP7103
+            return "List all versions of " + prefix + " (A/B/C/D) with instructors, semesters, schedules, exam dates, and add/drop deadlines. Compare them and recommend the best one.";
+        }
+
+        /* ====== 4. 默认重写 ====== */
         Query query = new Query(prompt);
-        // 执行查询重写
-        Query transformedQuery = queryTransformer.transform(query);
-        // 输出重写后的查询
-        return transformedQuery.text();
+        return queryTransformer.transform(query).text();
     }
 }
-

@@ -1,7 +1,7 @@
 package com.hku.hkuaiagent.controller;
 
 import com.hku.hkuaiagent.agent.HkuManus;
-import com.hku.hkuaiagent.app.LoveApp;
+import com.hku.hkuaiagent.app.HkuApp;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
@@ -20,7 +20,7 @@ import java.io.IOException;
 public class AiController {
 
     @Resource
-    private LoveApp loveApp;
+    private HkuApp hkuApp;
 
     @Resource
     private ToolCallback[] allTools;
@@ -37,7 +37,7 @@ public class AiController {
      */
     @GetMapping("/love_app/chat/sync")
     public String doChatWithLoveAppSync(String message, String chatId) {
-        return loveApp.doChat(message, chatId);
+        return hkuApp.doChat(message, chatId);
     }
 
     /**
@@ -49,7 +49,7 @@ public class AiController {
      */
     @GetMapping(value = "/love_app/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> doChatWithLoveAppSSE(String message, String chatId) {
-        return loveApp.doChatByStream(message, chatId);
+        return hkuApp.doChatByStream(message, chatId);
     }
 
     /**
@@ -61,7 +61,7 @@ public class AiController {
      */
     @GetMapping(value = "/love_app/chat/server_sent_event")
     public Flux<ServerSentEvent<String>> doChatWithLoveAppServerSentEvent(String message, String chatId) {
-        return loveApp.doChatByStream(message, chatId)
+        return hkuApp.doChatByStream(message, chatId)
                 .map(chunk -> ServerSentEvent.<String>builder()
                         .data(chunk)
                         .build());
@@ -79,7 +79,7 @@ public class AiController {
         // 创建一个超时时间较长的 SseEmitter
         SseEmitter sseEmitter = new SseEmitter(180000L); // 3 分钟超时
         // 获取 Flux 响应式数据流并且直接通过订阅推送给 SseEmitter
-        loveApp.doChatByStream(message, chatId)
+        hkuApp.doChatByStream(message, chatId)
                 .subscribe(chunk -> {
                     try {
                         sseEmitter.send(chunk);
