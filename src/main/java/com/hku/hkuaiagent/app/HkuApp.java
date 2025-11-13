@@ -67,6 +67,11 @@ public class HkuApp {
             3. If the user asks for "course selection advice" for a code like COMP7103, you MUST compare ALL versions (A/B/C/D) and give a structured comparison.
             4. Never invent courses not found in the RAG knowledge base.
             5. Always cite the document filename in parentheses when referencing facts.
+
+            RESPONSE STYLE:
+            - Provide clear prose paragraphs or short numbered lists when appropriate.
+            - Avoid Markdown decorations such as bold, italics, bullet symbols (*, -, #) and code fences.
+            - Use consistent spacing and punctuation so that the output reads naturally in plain text.
             """;
 
     public HkuApp(ChatModel dashscopeChatModel) {
@@ -112,9 +117,10 @@ public class HkuApp {
         .call()
         .chatResponse();
 
-    return resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+    String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
         ? resp.getResult().getOutput().getText()
         : "";
+    return sanitizeResponseText(output);
     }
 
     public Flux<String> doChatByStream(String message, String chatId) {
@@ -146,7 +152,8 @@ public class HkuApp {
 
     return promptBuilder
         .stream()
-        .content();
+        .content()
+        .map(this::sanitizeStreamChunk);
     }
 
     /* ===================== 手动加载文档 + 前缀过滤（兼容 1.0.0） ===================== */
@@ -177,13 +184,16 @@ public class HkuApp {
         String augmented = "以下是匹配的课程文档：\n" + sb;
 
         // 4️⃣ 发给模型
-        ChatResponse resp = chatClient.prompt()
+    ChatResponse resp = chatClient.prompt()
                 .system(SYSTEM_PROMPT + "\n" + augmented)
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
                 .chatResponse();
-        return resp.getResult().getOutput().getText();
+    String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+        ? resp.getResult().getOutput().getText()
+        : "";
+    return sanitizeResponseText(output);
     }
 
     /* ===================== 带学期过滤的 RAG 入口（已放大 topK） ===================== */
@@ -193,7 +203,7 @@ public class HkuApp {
         if (chunks == null || chunks.isEmpty()) {
             return "";
         }
-        return String.join("", chunks);
+    return sanitizeResponseText(String.join("", chunks));
     }
 
     public Flux<String> doChatWithRagStream(String message, String chatId) {
@@ -218,13 +228,14 @@ public class HkuApp {
             promptBuilder = promptBuilder.system(SYSTEM_PROMPT + "\n\n" + manualContext);
         }
 
-        return promptBuilder
+    return promptBuilder
                 .user(rewritten)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(new MyLoggerAdvisor())
                 .advisors(advisor)
                 .stream()
-                .content();
+        .content()
+        .map(this::sanitizeStreamChunk);
     }
 
     private String buildSemesterCourseContext(String semester) {
@@ -372,7 +383,10 @@ public class HkuApp {
                 .toolCallbacks(allTools)
                 .call()
                 .chatResponse();
-        return resp.getResult().getOutput().getText();
+    String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+        ? resp.getResult().getOutput().getText()
+        : "";
+    return sanitizeResponseText(output);
     }
 
     public String doChatWithMcp(String message, String chatId) {
@@ -383,7 +397,10 @@ public class HkuApp {
                 .toolCallbacks(toolCallbackProvider)
                 .call()
                 .chatResponse();
-        return resp.getResult().getOutput().getText();
+    String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+        ? resp.getResult().getOutput().getText()
+        : "";
+    return sanitizeResponseText(output);
     }
 
     /* ===================== 结构化恋爱报告（保留原签名） ===================== */
@@ -399,5 +416,32 @@ public class HkuApp {
                 .entity(LoveReport.class);
         log.info("loveReport: {}", report);
         return report;
+    }
+
+    private String sanitizeResponseText(String text) {
+        if (text == null) {
+            return "";
+        }
+        String sanitized = basicSanitize(text);
+        sanitized = sanitized.replaceAll("\\n{3,}", "\n\n");
+        return sanitized.trim();
+    }
+
+    private String sanitizeStreamChunk(String chunk) {
+        if (chunk == null) {
+            return "";
+        }
+        return basicSanitize(chunk);
+    }
+
+    private String basicSanitize(String text) {
+        String sanitized = text
+                .replace("**", "")
+                .replace('\u00A0', ' ');
+        sanitized = sanitized.replaceAll("(?m)^\\s*[-*]\\s+", "");
+        sanitized = sanitized.replaceAll("(?m)^\\s*#+\\s+", "");
+        sanitized = sanitized.replaceAll(" {2,}", " ");
+        sanitized = sanitized.replaceAll("\\s+\\n", "\n");
+        return sanitized;
     }
 }
