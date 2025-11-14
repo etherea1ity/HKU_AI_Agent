@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "amap-maps": {
-      "command": "D:\\develop\\nodeJs\\npx.cmd",
-      "args": ["-y", "@amap/amap-maps-mcp-server", "--stdio"],
+      "command": "cmd.exe",
+      "args": [
+        "/C",
+        "if exist \"D:\\develop\\nodeJs\\npx.cmd\" ( \"D:\\develop\\nodeJs\\npx.cmd\" -y @amap/amap-maps-mcp-server --stdio ) else ( npx.cmd -y @amap/amap-maps-mcp-server --stdio )"
+      ],
       "env": {
         "AMAP_MAPS_API_KEY": "efb6e4332734c0f4951e911a25d4537d"
       }
