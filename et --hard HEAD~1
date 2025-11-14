@@ -1,0 +1,26 @@
+[33mae2db37[m[33m ([m[1;36mHEAD -> [m[1;32mbackend-tools+mcp[m[33m, [m[1;31morigin/backend-tools+mcp[m[33m)[m 1
+[33mba03dc7[m 完善Manus智能体对话系统和PDF生成功能 1. 修复对话显示问题 2. 对话记忆系统 3. 深度思考可视化 4. PDF生成和下载 5. UI/UX优化
+[33m18815aa[m "修正搜索MCP文件 (最后Manus功能有问题，先不要合并)"
+[33mc3766a6[m "Revise MCP and Tools (最后Manus功能有问题，先不要合并)"
+[33mad00ad4[m git commit -m "Revise MCP and Tools (最后Manus功能有问题，先不要合并)"
+[33mde86313[m change the frontend of 3 pages, and add the historical storage
+[33m74f5e1b[m modify HKU AI agent
+[33m7e03e12[m update README.md
+[33m3af5514[m change readme
+[33m9853430[m initialize
+[33m6d4608c[m refactor: 升级 Spring AI 依赖版本为 1.0 - 更新依赖版本：Spring AI Alibaba: 1.0.0.2、Spring AI: 1.0.0 - 重构代码，实现新版本兼容：   - 更新导入路径   - 调整类和方法签名以适应新版本   - 优化部分实现细节
+[33m0ace2a4[m refactor: 优化配置和注释以便开发调试
+[33mc303e20[m Update README.md
+[33md214ea8[m 第 9 期 - AI 服务化 1. 后端增加 AI 接口（SSE 和同步 2 种方式） 2. 生成前端项目 3. 后端增加 Dockerfile 部署文件 4. 前端增加 Dockerfile 部署文件和 Nginx 配置文件
+[33m01efbc4[m 第 8 期 - AI 智能体构建 1. 开发拥有自主规划能力的 AI 智能体 2. 新增 TerminateTool 工具，用于中断智能体执行
+[33m4dd8a48[m 第 7 期 - MCP 协议 1. 恋爱大师应用整合高德地图 MCP 服务，能够推荐约会地点 2. 开发图片搜索 MCP Server
+[33m86ad9d7[m 第 6 期 - 工具调用 1. 实现 6 个实用工具：文件操作、联网搜索、网页抓取、终端操作、资源下载、PDF 生成，并集中注册 2. 恋爱大师应用使用工具 3. 开启工具调用 DEBUG 日志
+[33me550d68[m 第 5 期 - RAG 知识库进阶 1. 整合 PgVector 实现向量存储 2. 基于 Token 的文本分割器 3. 基于 AI 的关键词增强器 4. 基于 AI 的多查询扩展器 5. 基于 AI 的查询重写器 6. 给恋爱大师文档加载器补充 status 状态的自动提取 7. 自定义检索增强顾问（工厂模式），实现更灵活地搜索 8. 自定义上下文查询增强器（工厂模式），提高容错性
+[33m60984bd[m 第 4 期 - RAG 知识库基础 1. 实战 Spring AI + 本地知识库，开发文档加载器，给 AI 恋爱大师应用新增和知识库对话功能 2. 实战：Spring AI + 云知识库服务，开发云知识库 RAG Advisor
+[33m3ba6cbf[m Merge branch 'master' of https://github.com/liyupi/yu-ai-agent
+[33m115db41[m 第 3 期 - AI 应用开发 1. 实现多轮对话 AI 恋爱大师应用 2. 自定义日志 Advisor、ReReading Advisor 3. 实现 AI 恋爱报告生成功能（结构化输出） 4. 自定义基于文件的会话记忆
+[33m38029c0[m Update README.md
+[33m29bd634[m 第 2 期 - AI 大模型接入 1. 新建项目，完成后端初始化 2. 整合 Hutool 和 Knife4j 依赖 3. 整合 Spring AI、LangChain4j 等框架，实现 4 种程序调用 AI 大模型的示例代码
+[33m7315199[m Merge branch 'master' of https://github.com/liyupi/yu-ai-agent
+[33m0a24cff[m 第 2 期 - AI 大模型接入 1. 新建项目，完成后端初始化 2. 整合 Hutool 和 Knife4j 依赖 3. 整合 Spring AI、LangChain4j 等框架，实现 4 种程序调用 AI 大模型的示例代码
+[33md9b808b[m Create README.md
