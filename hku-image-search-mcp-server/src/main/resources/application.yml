@@ -1,7 +1,7 @@
 spring:
   application:
-    name: hku-image-search-mcp-server
+    name: hku-image-search-mcp-servers1.json-server
   profiles:
-    active: sse
+    active: stdio
 server:
   port: 8127

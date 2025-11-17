@@ -10,11 +10,25 @@ import org.springframework.ai.tool.annotation.ToolParam;
  */
 public class WebScrapingTool {
 
-    @Tool(description = "Scrape the content of a web page")
+    @Tool(description = "Scrape the content of a web page and return readable text")
     public String scrapeWebPage(@ToolParam(description = "URL of the web page to scrape") String url) {
         try {
             Document document = Jsoup.connect(url).get();
-            return document.html();
+            String title = document.title();
+            String bodyText = document.body() != null ? document.body().text() : "";
+
+            if (bodyText.length() > 3000) {
+                bodyText = bodyText.substring(0, 3000) + "...";
+            }
+
+            StringBuilder builder = new StringBuilder();
+            if (!title.isBlank()) {
+                builder.append("页面标题: ").append(title).append('\n');
+            }
+            builder.append("摘录内容: ").append(bodyText);
+            builder.append("\n\n原始链接: ").append(url);
+
+            return builder.toString();
         } catch (Exception e) {
             return "Error scraping web page: " + e.getMessage();
         }

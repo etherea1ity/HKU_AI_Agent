@@ -44,12 +44,26 @@
       </div>
       <div class="content-wrapper">
         <div class="chat-area">
-          <ChatRoom
-            :messages="messages"
-            :connection-status="connectionStatus"
-            ai-type="love"
-            @send-message="sendMessage"
-          />
+          <div class="deep-panel">
+            <DeepThinkingPanel
+              :visible="deepPanelVisible"
+              :is-thinking="isThinking"
+              :header="thinkingHeader"
+              :subtitle="thinkingSubtitle"
+              :steps="thinkingSteps"
+              :rag-sources="ragSources"
+              :collapsed="isPanelCollapsed"
+              @toggle-collapse="toggleThinkingPanel"
+            />
+          </div>
+          <div class="chat-room-wrapper">
+            <ChatRoom
+              :messages="messages"
+              :connection-status="connectionStatus"
+              ai-type="love"
+              @send-message="sendMessage"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -57,10 +71,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
 import ChatRoom from '../components/ChatRoom.vue'
+import DeepThinkingPanel from '../components/DeepThinkingPanel.vue'
 import { chatWithLoveApp } from '../api'
 
 useHead({
@@ -81,6 +96,13 @@ const DESKTOP_BREAKPOINT = 1024
 const STORAGE_KEY = 'hku_campus_chat_history'
 const WELCOME_MESSAGE = '欢迎来到 HKU Campus Companion。\n\n我可以协助你查询课程安排、行政流程、校园设施与最新公告。\n\n告诉我你遇到的问题或想了解的主题，我们一起整理答案。'
 
+const SSE_TAGS = {
+  THINKING_START: '[THINKING_START]',
+  THINKING_END: '[THINKING_END]',
+  TOOL_CALL: '[TOOL_CALL]',
+  RAG_CONTEXT: '[RAG_CONTEXT]'
+}
+
 const router = useRouter()
 const isSidebarOpen = ref(false)
 const isDesktop = ref(false)
@@ -89,7 +111,87 @@ const activeConversationId = ref('')
 const messages = ref([])
 const chatId = ref('')
 const connectionStatus = ref('disconnected')
+const isThinking = ref(false)
+const thinkingSteps = ref([])
+const ragSources = ref([])
+const thinkingHeader = ref('')
+const thinkingSubtitle = ref('')
+const isPanelCollapsed = ref(false)
 let eventSource = null
+
+const createEmptyDeepThinkingState = () => ({
+  steps: [],
+  ragSources: [],
+  header: '',
+  subtitle: '',
+  collapsed: false
+})
+
+// 默认显示深度思考面板（可折叠）
+const deepPanelAlwaysVisible = ref(true)
+const deepPanelVisible = computed(() => {
+  return (
+    deepPanelAlwaysVisible.value ||
+    isThinking.value ||
+    thinkingSteps.value.length > 0 ||
+    ragSources.value.length > 0 ||
+    Boolean(thinkingHeader.value)
+  )
+})
+
+const toggleThinkingPanel = () => {
+  isPanelCollapsed.value = !isPanelCollapsed.value
+}
+
+function applyDeepThinkingState(state) {
+  const data = state || createEmptyDeepThinkingState()
+  thinkingSteps.value = Array.isArray(data.steps) ? data.steps.map((item) => ({ ...item })) : []
+  ragSources.value = Array.isArray(data.ragSources) ? data.ragSources.map((item) => ({ ...item })) : []
+  thinkingHeader.value = data.header || ''
+  thinkingSubtitle.value = data.subtitle || ''
+  isPanelCollapsed.value = Boolean(data.collapsed)
+}
+
+const captureDeepThinkingState = () => ({
+  steps: thinkingSteps.value.map((item) => ({ ...item })),
+  ragSources: ragSources.value.map((item) => ({ ...item })),
+  header: thinkingHeader.value,
+  subtitle: thinkingSubtitle.value,
+  collapsed: isPanelCollapsed.value
+})
+
+const clearDeepThinkingState = () => {
+  isThinking.value = false
+  thinkingSteps.value = []
+  ragSources.value = []
+  thinkingHeader.value = ''
+  thinkingSubtitle.value = ''
+}
+
+const parseRagSources = (raw) => {
+  if (!raw) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    const list = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.sources)
+        ? parsed.sources
+        : []
+
+    return list
+      .map((item) => ({
+        title: String(item?.title || '相关资料'),
+        snippet: String(item?.snippet || '').trim(),
+        source: item?.source ? String(item.source) : ''
+      }))
+      .filter((item) => item.title || item.snippet)
+  } catch (error) {
+    console.warn('Failed to parse RAG payload', error)
+    return []
+  }
+}
 
 const generateChatId = () => `campus_${Math.random().toString(36).substring(2, 10)}`
 const buildWelcomeMessage = () => WELCOME_MESSAGE
@@ -113,7 +215,8 @@ const sanitizeConversation = (raw) => {
     title: typeof raw?.title === 'string' && raw.title.trim() ? raw.title : 'New chat',
     messages: messagesWithFallback,
     createdAt: typeof raw?.createdAt === 'number' ? raw.createdAt : Date.now(),
-    updatedAt: typeof raw?.updatedAt === 'number' ? raw.updatedAt : Date.now()
+    updatedAt: typeof raw?.updatedAt === 'number' ? raw.updatedAt : Date.now(),
+    deepThinking: raw?.deepThinking || createEmptyDeepThinkingState()
   }
 }
 
@@ -130,6 +233,7 @@ const setActiveConversation = (conversation) => {
   chatId.value = conversation.chatId
   messages.value = conversation.messages.map((msg) => ({ ...msg }))
   connectionStatus.value = 'disconnected'
+  applyDeepThinkingState(conversation.deepThinking)
 }
 
 const syncActiveConversation = ({ userMessage } = {}) => {
@@ -140,6 +244,7 @@ const syncActiveConversation = ({ userMessage } = {}) => {
   const conversation = conversations.value[index]
   conversation.messages = messages.value.map((msg) => ({ ...msg }))
   conversation.updatedAt = Date.now()
+  conversation.deepThinking = captureDeepThinkingState()
 
   if (userMessage) {
     const trimmed = userMessage.trim()
@@ -196,7 +301,8 @@ const createConversation = () => {
     title: 'New chat',
     messages: [{ content: buildWelcomeMessage(), isUser: false, time: Date.now() }],
     createdAt: Date.now(),
-    updatedAt: Date.now()
+    updatedAt: Date.now(),
+    deepThinking: createEmptyDeepThinkingState()
   }
 }
 
@@ -204,6 +310,7 @@ const createNewConversation = () => {
   if (connectionStatus.value === 'connecting') {
     return
   }
+  syncActiveConversation()
   if (eventSource) {
     eventSource.close()
     eventSource = null
@@ -220,6 +327,7 @@ const openConversation = (id) => {
   if (!conversation) {
     return
   }
+  syncActiveConversation()
   if (eventSource) {
     eventSource.close()
     eventSource = null
@@ -244,6 +352,7 @@ const confirmDeleteConversation = (id) => {
   }
 
   if (activeConversationId.value === id) {
+    clearDeepThinkingState()
     if (conversations.value.length) {
       setActiveConversation(conversations.value[0])
     } else {
@@ -275,6 +384,8 @@ const sendMessage = (message) => {
     eventSource = null
   }
 
+  clearDeepThinkingState()
+  syncActiveConversation()
   const aiMessageIndex = messages.value.length
   addMessage('', false)
 
@@ -283,23 +394,65 @@ const sendMessage = (message) => {
 
   eventSource.onmessage = (event) => {
     const data = event.data
-    if (data && data !== '[DONE]') {
-      if (aiMessageIndex < messages.value.length) {
-        let chunk = data
-        const currentContent = messages.value[aiMessageIndex].content
-        const needsSpace = currentContent && !/\s$/.test(currentContent) && !/^[\s.,;:!?)/-]/.test(chunk)
-        if (needsSpace) {
-          chunk = ' ' + chunk
-        }
-        messages.value[aiMessageIndex].content += chunk
-        syncActiveConversation()
-      }
+    if (!data) {
+      return
     }
 
     if (data === '[DONE]') {
       connectionStatus.value = 'disconnected'
       eventSource?.close()
       eventSource = null
+      syncActiveConversation()
+      return
+    }
+
+    if (data.startsWith(SSE_TAGS.THINKING_START)) {
+      isThinking.value = true
+      thinkingSteps.value = []
+      ragSources.value = []
+      const payload = data.slice(SSE_TAGS.THINKING_START.length).trim()
+      thinkingHeader.value = payload || 'HKU Campus Companion 深度思考中…'
+      thinkingSubtitle.value = '正在检索 HKU 知识库'
+      isPanelCollapsed.value = false
+      connectionStatus.value = 'connected'
+      syncActiveConversation()
+      return
+    }
+
+    if (data.startsWith(SSE_TAGS.THINKING_END)) {
+      isThinking.value = false
+      const payload = data.slice(SSE_TAGS.THINKING_END.length).trim()
+      thinkingSubtitle.value = payload || '思考完成'
+      syncActiveConversation()
+      return
+    }
+
+    if (data.startsWith(SSE_TAGS.TOOL_CALL)) {
+      const step = data.slice(SSE_TAGS.TOOL_CALL.length).trim()
+      if (step) {
+        thinkingSteps.value.push({ content: step, time: Date.now() })
+        syncActiveConversation()
+      }
+      return
+    }
+
+    if (data.startsWith(SSE_TAGS.RAG_CONTEXT)) {
+      const payload = data.slice(SSE_TAGS.RAG_CONTEXT.length)
+      const sources = parseRagSources(payload)
+      if (sources.length) {
+        ragSources.value = sources
+        thinkingSubtitle.value = '已获取知识库线索'
+        syncActiveConversation()
+      }
+      return
+    }
+
+    if (aiMessageIndex < messages.value.length) {
+      if (isThinking.value) {
+        isThinking.value = false
+        thinkingSubtitle.value = '输出回复中…'
+      }
+      messages.value[aiMessageIndex].content += data
       syncActiveConversation()
     }
   }
@@ -309,6 +462,7 @@ const sendMessage = (message) => {
     connectionStatus.value = 'error'
     eventSource?.close()
     eventSource = null
+    clearDeepThinkingState()
     syncActiveConversation()
   }
 }
@@ -609,6 +763,21 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   padding: 16px;
+}
+
+.chat-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.deep-panel {
+  flex: 0 0 auto;
+}
+
+.chat-room-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 @media (min-width: 768px) {

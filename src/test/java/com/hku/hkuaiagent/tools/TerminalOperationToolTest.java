@@ -13,6 +13,7 @@ class TerminalOperationToolTest {
         String command = "dir";
         String result = terminalOperationTool.executeTerminalCommand(command);
         Assertions.assertNotNull(result);
+        System.out.println(result);
     }
 }
 

@@ -1,24 +1,29 @@
-<template>
+﻿<template>
   <div class="chat-container">
     <!-- 聊天记录区域 -->
     <div class="chat-messages" ref="messagesContainer">
       <div v-for="(msg, index) in messages" :key="index" class="message-wrapper">
         <!-- AI消息 -->
-        <div v-if="!msg.isUser" 
-             class="message ai-message" 
-             :class="[msg.type]">
+        <div
+          v-if="!msg.isUser"
+          class="message ai-message"
+          :class="[msg.type]"
+        >
           <div class="avatar ai-avatar">
             <AiAvatarFallback :type="aiType" />
           </div>
           <div class="message-bubble">
             <div class="message-content">
-              {{ msg.content }}
-              <span v-if="connectionStatus === 'connecting' && index === messages.length - 1" class="typing-indicator">▋</span>
+              <span v-html="formatMessageContent(msg.content)"></span>
+              <span
+                v-if="connectionStatus === 'connecting' && index === messages.length - 1"
+                class="typing-indicator"
+              >▋</span>
             </div>
             <div class="message-time">{{ formatTime(msg.time) }}</div>
           </div>
         </div>
-        
+
         <!-- 用户消息 -->
         <div v-else class="message user-message" :class="[msg.type]">
           <div class="message-bubble">
@@ -35,15 +40,15 @@
     <!-- 输入区域 -->
     <div class="chat-input-container">
       <div class="chat-input">
-        <textarea 
-          v-model="inputMessage" 
+        <textarea
+          v-model="inputMessage"
           @keydown.enter.prevent="sendMessage"
-          placeholder="请输入消息..." 
+          placeholder="请输入消息..."
           class="input-box"
           :disabled="connectionStatus === 'connecting'"
         ></textarea>
-        <button 
-          @click="sendMessage" 
+        <button
+          @click="sendMessage"
           class="send-button"
           :disabled="connectionStatus === 'connecting' || !inputMessage.trim()"
         >发送</button>
@@ -53,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick, watch, computed } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import AiAvatarFallback from './AiAvatarFallback.vue'
 
 const props = defineProps({
@@ -67,7 +72,7 @@ const props = defineProps({
   },
   aiType: {
     type: String,
-    default: 'default'  // 'love' 或 'super'
+    default: 'default' // 'love' 或 'super'
   }
 })
 
@@ -76,17 +81,12 @@ const emit = defineEmits(['send-message'])
 const inputMessage = ref('')
 const messagesContainer = ref(null)
 
-// 根据AI类型选择不同头像
-const aiAvatar = computed(() => {
-  return props.aiType === 'love' 
-    ? '/ai-love-avatar.png'  // 恋爱大师头像
-    : '/ai-super-avatar.png' // 超级智能体头像
-})
-
 // 发送消息
 const sendMessage = () => {
-  if (!inputMessage.value.trim()) return
-  
+  if (!inputMessage.value.trim()) {
+    return
+  }
+
   emit('send-message', inputMessage.value)
   inputMessage.value = ''
 }
@@ -97,7 +97,73 @@ const formatTime = (timestamp) => {
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-// 自动滚动到底部
+// 格式化消息内容，提供基础的富文本支持并清理异常字符
+const formatMessageContent = (content) => {
+  if (!content) {
+    return ''
+  }
+
+  let processedContent = content
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, '😊')
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
+    .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')
+
+  const downloadButtons = []
+  processedContent = processedContent.replace(/\[DOWNLOAD_LINK\](.*?)\[\/DOWNLOAD_LINK\]/g, (match, url) => {
+    const placeholder = `__DOWNLOAD_BTN_${downloadButtons.length}__`
+    downloadButtons.push(url.trim())
+    return placeholder
+  })
+
+  let escapedContent = processedContent
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+
+  escapedContent = escapedContent.replace(/\n/g, '<br>')
+
+  downloadButtons.forEach((url, index) => {
+    const placeholder = `__DOWNLOAD_BTN_${index}__`
+    const safeUrl = url.replace(/&amp;/g, '&')
+    escapedContent = escapedContent.replace(
+      placeholder,
+      `<a href="${safeUrl}" target="_blank" class="download-btn" download>📥 点击下载PDF</a>`
+    )
+  })
+
+  const urlRegex = /(https?:\/\/[^\s<]+)/g
+  escapedContent = escapedContent.replace(urlRegex, (url) => {
+    if (escapedContent.indexOf(`href="${url}"`) !== -1) {
+      return url
+    }
+
+    const punctuationRegex = /[)\].,;:!?]+$/
+    const match = url.match(punctuationRegex)
+    let cleanUrl = url
+    let trailingPunctuation = ''
+
+    if (match) {
+      trailingPunctuation = match[0]
+      cleanUrl = url.slice(0, -trailingPunctuation.length)
+    }
+
+    return `<a href="${cleanUrl}" target="_blank" class="link" rel="noopener noreferrer">${cleanUrl}</a>${trailingPunctuation}`
+  })
+
+  escapedContent = escapedContent.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  escapedContent = escapedContent.replace(/^### (.+)$/gm, '<h4>$1</h4>')
+  escapedContent = escapedContent.replace(/^## (.+)$/gm, '<h3>$1</h3>')
+  escapedContent = escapedContent.replace(/^# (.+)$/gm, '<h2>$1</h2>')
+
+  return escapedContent
+}
+
 const scrollToBottom = async () => {
   await nextTick()
   if (messagesContainer.value) {
@@ -105,12 +171,11 @@ const scrollToBottom = async () => {
   }
 }
 
-// 监听消息变化与内容变化，自动滚动
 watch(() => props.messages.length, () => {
   scrollToBottom()
 })
 
-watch(() => props.messages.map(m => m.content).join(''), () => {
+watch(() => props.messages.map((m) => m.content).join(''), () => {
   scrollToBottom()
 })
 
@@ -120,7 +185,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
 .chat-container {
   display: flex;
   flex-direction: column;
@@ -132,7 +196,6 @@ onMounted(() => {
   overflow: hidden;
   position: relative;
 }
-
 
 .chat-messages {
   flex: 1;
@@ -158,12 +221,12 @@ onMounted(() => {
 }
 
 .user-message {
-  margin-left: auto; /* 用户消息靠右 */
-  flex-direction: row; /* 正常顺序，先气泡后头像 */
+  margin-left: auto;
+  flex-direction: row;
 }
 
 .ai-message {
-  margin-right: auto; /* AI消息靠左 */
+  margin-right: auto;
 }
 
 .avatar {
@@ -178,11 +241,11 @@ onMounted(() => {
 }
 
 .user-avatar {
-  margin-left: 8px; /* 用户头像在右侧，左边距 */
+  margin-left: 8px;
 }
 
 .ai-avatar {
-  margin-right: 8px; /* AI头像在左侧，右边距 */
+  margin-right: 8px;
 }
 
 .avatar-placeholder {
@@ -192,8 +255,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   background-color: #007bff;
-  color: white;
-  font-weight: bold;
+  color: #fff;
+  font-weight: 600;
 }
 
 .message-bubble {
@@ -201,12 +264,12 @@ onMounted(() => {
   border-radius: 18px;
   position: relative;
   word-wrap: break-word;
-  min-width: 100px; /* 最小宽度 */
+  min-width: 100px;
 }
 
 .user-message .message-bubble {
   background-color: #007bff;
-  color: white;
+  color: #fff;
   border-bottom-right-radius: 4px;
   text-align: left;
 }
@@ -224,6 +287,72 @@ onMounted(() => {
   white-space: pre-wrap;
 }
 
+.message-content :deep(a.link) {
+  color: #1976d2;
+  text-decoration: none;
+  transition: all 0.2s;
+  border-bottom: 1px solid transparent;
+}
+
+.message-content :deep(a.link:hover) {
+  color: #1565c0;
+  border-bottom-color: #1565c0;
+}
+
+.message-content :deep(a.download-btn) {
+  display: inline-block;
+  padding: 12px 24px;
+  margin: 16px 0 8px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff !important;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  cursor: pointer;
+}
+
+.message-content :deep(a.download-btn:hover) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+  background: linear-gradient(135deg, #7c8ef5 0%, #8a5ab3 100%);
+}
+
+.message-content :deep(a.download-btn:active) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+}
+
+.message-content :deep(strong) {
+  font-weight: 600;
+  color: #333;
+}
+
+.message-content :deep(h2),
+.message-content :deep(h3),
+.message-content :deep(h4) {
+  margin: 12px 0 8px 0;
+  font-weight: 600;
+}
+
+.message-content :deep(h2) {
+  font-size: 1.3em;
+  color: #1976d2;
+}
+
+.message-content :deep(h3) {
+  font-size: 1.2em;
+  color: #333;
+}
+
+.message-content :deep(h4) {
+  font-size: 1.1em;
+  color: #666;
+}
+
 .message-time {
   font-size: 12px;
   opacity: 0.7;
@@ -231,10 +360,9 @@ onMounted(() => {
   text-align: right;
 }
 
-
 .chat-input-container {
   margin: 0 24px 24px;
-  background-color: white;
+  background-color: #fff;
   border: 1px solid rgba(148, 163, 184, 0.35);
   box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
   padding: 12px 16px 12px 20px;
@@ -248,7 +376,6 @@ onMounted(() => {
   gap: 12px;
   align-items: center;
 }
-
 
 .input-box {
   flex-grow: 1;
@@ -265,18 +392,15 @@ onMounted(() => {
   background-color: #f8fafc;
 }
 
-/* 隐藏Webkit浏览器的滚动条 */
 .input-box::-webkit-scrollbar {
   display: none;
 }
-
 
 .input-box:focus {
   border-color: #0b5ba6;
   box-shadow: 0 0 0 3px rgba(11, 91, 166, 0.13);
   background-color: #fff;
 }
-
 
 .send-button {
   background: linear-gradient(135deg, #0b5ba6, #2563eb);
@@ -307,25 +431,25 @@ onMounted(() => {
   100% { opacity: 0; }
 }
 
-.input-box:disabled, .send-button:disabled {
+.input-box:disabled,
+.send-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
   .message {
     max-width: 95%;
   }
-  
+
   .message-content {
     font-size: 15px;
   }
-  
+
   .input-box {
     padding: 8px 12px;
   }
-  
+
   .send-button {
     padding: 0 15px;
     font-size: 14px;
@@ -337,15 +461,15 @@ onMounted(() => {
     width: 32px;
     height: 32px;
   }
-  
+
   .message-bubble {
     padding: 10px;
   }
-  
+
   .message-content {
     font-size: 14px;
   }
-  
+
   .chat-input-container {
     margin: 0 16px 16px;
     padding: 10px 14px 10px 16px;
@@ -356,7 +480,6 @@ onMounted(() => {
   }
 }
 
-/* 新增：不同类型消息的样式 */
 .ai-answer {
   animation: fadeIn 0.3s ease-in-out;
 }
@@ -365,7 +488,6 @@ onMounted(() => {
   opacity: 0.7;
 }
 
-/* 连续消息气泡样式 */
 .ai-message + .ai-message {
   margin-top: 4px;
 }
@@ -377,4 +499,4 @@ onMounted(() => {
 .ai-message + .ai-message .message-bubble {
   border-top-left-radius: 10px;
 }
-</style> 
+</style>

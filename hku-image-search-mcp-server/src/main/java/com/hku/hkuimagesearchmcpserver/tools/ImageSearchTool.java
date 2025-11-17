@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
 @Service
 public class ImageSearchTool {
 
-    // 替换为你的 Pexels API 密钥（需从官网申请）
-    private static final String API_KEY = "改为你的 API Key";
+    // 替换为你的 Pexels API 密钥（需从官网申请  https://www.pexels.com/api/）
+    private static final String API_KEY = "tu5nMobveui1GbCaGjZki22jCwS3lj5H1C6iuPSt3FEagENBCrwmTF5y";
 
     // Pexels 常规搜索接口（请以文档为准）
     private static final String API_URL = "https://api.pexels.com/v1/search";
@@ -25,7 +25,7 @@ public class ImageSearchTool {
     @Tool(description = "search image from web")
     public String searchImage(@ToolParam(description = "Search query keyword") String query) {
         try {
-            return String.join(",", searchMediumImages(query));
+            return String.join("\n", searchMediumImages(query));
         } catch (Exception e) {
             return "Error search image: " + e.getMessage();
         }

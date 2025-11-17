@@ -1,23 +1,24 @@
 {
   "mcpServers": {
     "amap-maps": {
-      "command": "npx.cmd",
+      "command": "cmd.exe",
       "args": [
-        "-y",
-        "@amap/amap-maps-mcp-server"
+        "/C",
+        "if exist \"D:\\develop\\nodeJs\\npx.cmd\" ( \"D:\\develop\\nodeJs\\npx.cmd\" -y @amap/amap-maps-mcp-server --stdio ) else ( npx.cmd -y @amap/amap-maps-mcp-server --stdio )"
       ],
       "env": {
-        "AMAP_MAPS_API_KEY": "你的 API Key"
+        "AMAP_MAPS_API_KEY": "46ba020f9063fb3728ff23b233e095e7",
+        "AMAP_WEB_API_KEY": "46ba020f9063fb3728ff23b233e095e7"
       }
     },
-  "hku-image-search-mcp-server": {
+    "hku-image-search-mcp-server": {
       "command": "java",
       "args": [
         "-Dspring.ai.mcp.server.stdio=true",
         "-Dspring.main.web-application-type=none",
         "-Dlogging.pattern.console=",
         "-jar",
-  "hku-image-search-mcp-server/target/hku-image-search-mcp-server-0.0.1-SNAPSHOT.jar"
+        "hku-image-search-mcp-server/target/hku-image-search-mcp-server-0.0.1-SNAPSHOT.jar"
       ],
       "env": {}
     }

@@ -17,6 +17,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,8 +30,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ToolCallAgent extends ReActAgent {
 
-    // 可用的工具
+    // 可用的工具 8个
     private final ToolCallback[] availableTools;
+
+    // MCP工具
+    private final ToolCallbackProvider mcpToolProvider;
 
     // 保存工具调用信息的响应结果（要调用那些工具）
     private ChatResponse toolCallChatResponse;
@@ -41,15 +45,17 @@ public class ToolCallAgent extends ReActAgent {
     // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
     private final ChatOptions chatOptions;
 
-    public ToolCallAgent(ToolCallback[] availableTools) {
+    public ToolCallAgent(ToolCallback[] availableTools, ToolCallbackProvider mcpToolProvider) {
         super();
         this.availableTools = availableTools;
+        this.mcpToolProvider = mcpToolProvider;
         this.toolCallingManager = ToolCallingManager.builder().build();
         // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
         this.chatOptions = DashScopeChatOptions.builder()
                 .withInternalToolExecutionEnabled(false)
                 .build();
     }
+
 
     /**
      * 处理当前状态并决定下一步行动
@@ -69,7 +75,9 @@ public class ToolCallAgent extends ReActAgent {
         try {
             ChatResponse chatResponse = getChatClient().prompt(prompt)
                     .system(getSystemPrompt())
-                    .tools(availableTools)
+                    .toolCallbacks(availableTools)
+                    .toolCallbacks(mcpToolProvider)
+                    //.tools(availableTools)
                     .call()
                     .chatResponse();
             // 记录响应，用于等下 Act
@@ -81,28 +89,75 @@ public class ToolCallAgent extends ReActAgent {
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
             // 输出提示信息
             String result = assistantMessage.getText();
-            log.info(getName() + "的思考：" + result);
+            if (StrUtil.isNotBlank(result)) {
+                log.info(getName() + "的思考：" + result);
+            }
             log.info(getName() + "选择了 " + toolCallList.size() + " 个工具来使用");
-            String toolCallInfo = toolCallList.stream()
-                    .map(toolCall -> String.format("工具名称：%s，参数：%s", toolCall.name(), toolCall.arguments()))
-                    .collect(Collectors.joining("\n"));
-            log.info(toolCallInfo);
+            
             // 如果不需要调用工具，返回 false
             if (toolCallList.isEmpty()) {
                 // 只有不调用工具时，才需要手动记录助手消息
                 getMessageList().add(assistantMessage);
+                // 标记任务完成
+                setState(AgentState.FINISHED);
                 return false;
             } else {
+                // 发送工具调用信息到前端（简洁版）
+                if (!toolCallList.isEmpty()) {
+                    String toolNames = toolCallList.stream()
+                            .map(toolCall -> getToolDisplayName(toolCall.name()))
+                            .collect(Collectors.joining("、"));
+                    sendSseMessage("[TOOL_CALL]第" + getCurrentStep() + "步：调用" + toolNames);
+                    
+                    // 详细信息只输出到日志
+                    String toolCallInfo = toolCallList.stream()
+                            .map(toolCall -> String.format("工具名称：%s，参数：%s", toolCall.name(), toolCall.arguments()))
+                            .collect(Collectors.joining("\n"));
+                    log.info(toolCallInfo);
+                }
                 // 需要调用工具时，无需记录助手消息，因为调用工具时会自动记录
                 return true;
             }
         } catch (Exception e) {
             log.error(getName() + "的思考过程遇到了问题：" + e.getMessage());
             getMessageList().add(new AssistantMessage("处理时遇到了错误：" + e.getMessage()));
+            setState(AgentState.FINISHED);
             return false;
         }
     }
 
+    /**
+     * 获取工具的友好显示名称
+     * 
+     * @param toolName 工具的内部名称
+     * @return 用户友好的显示名称
+     */
+    private String getToolDisplayName(String toolName) {
+        // 将工具名称映射为用户友好的中文名称
+        return switch (toolName) {
+            case "maps_text_search" -> "地图搜索工具";
+            case "maps_around_search" -> "周边搜索工具";
+            case "maps_geo" -> "地理编码工具";
+            case "maps_regeocode" -> "逆地理编码工具";
+            case "maps_weather" -> "天气查询工具";
+            case "maps_direction_driving" -> "驾车路线规划工具";
+            case "maps_direction_walking" -> "步行路线规划工具";
+            case "maps_direction_transit_integrated" -> "公交路线规划工具";
+            case "maps_bicycling" -> "骑行路线规划工具";
+            case "maps_distance" -> "距离测量工具";
+            case "maps_search_detail" -> "POI详情查询工具";
+            case "maps_ip_location" -> "IP定位工具";
+            case "doWebSearch" -> "网络搜索工具";
+            case "doWebScraping" -> "网页抓取工具";
+            case "downloadResource" -> "资源下载工具";
+            case "generatePDF" -> "PDF生成工具";
+            case "executeCommand" -> "命令执行工具";
+            case "fileOperation" -> "文件操作工具";
+            case "doTerminate" -> "终止工具";
+            default -> toolName; // 默认返回原名称
+        };
+    }
+    
     /**
      * 执行工具调用并处理结果
      *
@@ -130,6 +185,11 @@ public class ToolCallAgent extends ReActAgent {
                 .map(response -> "工具 " + response.name() + " 返回的结果：" + response.responseData())
                 .collect(Collectors.joining("\n"));
         log.info(results);
+        
+        // 在工具调用完成后，添加一个提示，要求AI总结结果并回答用户问题
+        // 这样可以确保AI会在下一次think时生成最终的自然语言回复
+        // 注意：不要在这里添加提示，因为 NEXT_STEP_PROMPT 会在下一次 think 时自动添加
+        
         return results;
     }
 }

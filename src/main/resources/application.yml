@@ -3,47 +3,45 @@ spring:
     name: hku-ai-agent
   profiles:
     active: local
-  # 保持数据源注释（测试阶段不用PgVector）
-  #  datasource:
-  #    url: xxx
-  #    username: root
-  #    password: 123456
-  ai: # 关键修复：删除重复的 spring: 节点，ai 直接作为 spring 的子节点
+# 临时注释掉，便于大家开发调试和部署（实际填写 PgVector 数据库信息）
+#  datasource:
+#    url: xxx
+#    username: root
+#    password: 123456
+  ai:
     dashscope:
-      api-key: sk-7c5df1fd31cf48a1a8113d4a3bcbde40 # 替换为你的真实API-Key（已保留原key，无需修改）
+      # 需要替换为你自己的 key
+      api-key: ${hku.ai.dashscope.api-key}
       chat:
-        model: qwen-turbo  # 对话模型（RAG首选）
-        temperature: 0.1   # 低温度保证回答精准
-      embedding:
-        model: text-embedding-v3  # 嵌入模型（适配向量存储）
-        dimensions: 1536          # 向量维度（与SimpleVectorStore兼容）
-    # 注释ollama配置（避免与DashScope冲突）
-    # ollama:
-    #   base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    #   chat:
-    #     model: text-embedding-v3
-  # 保持MCP、PgVector注释（测试阶段不用）
-  #    mcp:
-  #      client:
-  #        sse:
-  #          connections:
-  #            server1:
-  #              url: http://localhost:8127
-  #        stdio:
-  #          servers-configuration: classpath:mcp-servers.json
-  #    vectorstore:
-  #      pgvector:
-  #        index-type: HNSW
-  #        dimensions: 1536
-  #        distance-type: COSINE_DISTANCE
-  #        max-document-batch-size: 10000
+        options:
+          model: qwen-plus
+    ollama:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      chat:
+        model: text-embedding-v3
+# 这里需要开启MCP，才能读取到mcp-servers.json文件并加载MCP服务
+    mcp:
+      client:
+        stdio:
+          servers-configuration: classpath:mcp-servers.json
 
+#        sse:
+#          connections:
+#            server1:
+#              url: http://localhost:8127
+
+# 临时注释掉，便于大家开发调试和部署（实际需要启动 PgVector 数据库）
+#    vectorstore:
+#      pgvector:
+#        index-type: HNSW
+#        dimensions: 1536
+#        distance-type: COSINE_DISTANCE
+#        max-document-batch-size: 10000 # Optional: Maximum number of documents per batch
 server:
   port: 8123
   servlet:
     context-path: /api
-
-# springdoc-openapi config（无需修改）
+# springdoc-openapi config
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -55,24 +53,22 @@ springdoc:
     - group: 'default'
       paths-to-match: '/**'
   packages-to-scan: com.hku.hkuaiagent.controller
-
-# knife4j config（无需修改）
+# knife4j config
 knife4j:
   enable: true
   setting:
     language: zh_cn
+# searchAPI
+search-api:
+  # 需要替换为自己的 key  https://www.searchapi.io/baidu 注册
+  api-key: ${hku.ai.search.api-key}
 
-# searchAPI（暂时注释，未用到相关功能）
-# search-api:
-#   api-key: 你的 API Key
-
-# 日志配置（DEBUG级别便于调试RAG流程）
+# 修改日志级别，查看 Spring AI 更多调用细节
 logging:
   level:
     org.springframework.ai: DEBUG
 
-# 启用本地RAG（必须为true）
 hku:
   ai:
     rag:
-      enabled: true
+      enabled: false
