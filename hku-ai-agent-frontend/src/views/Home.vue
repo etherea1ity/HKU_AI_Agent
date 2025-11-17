@@ -2,72 +2,129 @@
   <div class="home-container">
     <div class="header">
       <div class="glitch-wrapper">
-  <h1 class="glitch-title">HKU AI Agent</h1>
+        <h1 class="glitch-title">HKU Campus Assistant</h1>
       </div>
-  <p class="subtitle">An AI hub for HKU students and staff.</p>
+      <p class="subtitle">/ 香港大学校园智能助手 /</p>
       <div class="cyber-line"></div>
     </div>
-    
+
+    <!-- 信息展示区域 -->
+    <div class="info-display">
+      <div class="info-card">
+        <div class="info-icon">🕒</div>
+        <div class="info-content">
+          <div class="info-title">当前时间</div>
+          <div class="info-value">{{ currentTime }}</div>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">🌤️</div>
+        <div class="info-content">
+          <div class="info-title">香港天气</div>
+          <div class="info-value">加载中...</div>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">🏫</div>
+        <div class="info-content">
+          <div class="info-title">校园服务</div>
+          <div class="info-value">正常运营</div>
+        </div>
+      </div>
+    </div>
+
     <div class="apps-container">
-      <div class="app-card" @click="navigateTo('/love-master')">
+      <div class="app-card" @click="navigateTo('/hku-assistant')">
         <div class="card-glow"></div>
-        <div class="app-icon love-icon">❤️</div>
+        <div class="app-icon assistant-icon">🎓</div>
         <div class="app-info">
-          <div class="app-title">HKU AI Agent</div>
-          <div class="app-desc">Campus companion for HKU courses, policies, and student life guidance.</div>
+          <div class="app-title">HKU 小助手</div>
+          <div class="app-desc">校园生活助手，解答课程、规章、校历问题</div>
         </div>
         <div class="app-button">
-          <span class="btn-text">Start Chat</span>
+          <span class="btn-text">立即体验</span>
           <span class="btn-icon">→</span>
         </div>
       </div>
-      
-      <div class="app-card" @click="navigateTo('/super-agent')">
+
+      <div class="app-card" @click="navigateTo('/info-retrieval')">
         <div class="card-glow"></div>
-        <div class="app-icon robot-icon">🤖</div>
+        <div class="app-icon search-icon">🔍</div>
         <div class="app-info">
-          <div class="app-title">AI Super Agent</div>
-          <div class="app-desc">Versatile AI co-pilot ready to analyze complex tasks and offer actionable advice.</div>
+          <div class="app-title">信息检索</div>
+          <div class="app-desc">智能文档检索，快速查找校园相关信息</div>
         </div>
         <div class="app-button">
-          <span class="btn-text">Start Chat</span>
+          <span class="btn-text">立即体验</span>
           <span class="btn-icon">→</span>
         </div>
       </div>
     </div>
-    
+
     <div class="cyber-circles">
       <div class="circle circle-1"></div>
       <div class="circle circle-2"></div>
       <div class="circle circle-3"></div>
     </div>
+
+    <AppFooter />
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
+import { ref, onMounted, onUnmounted } from 'vue'
+import AppFooter from '../components/AppFooter.vue'
 
 // 设置页面标题和元数据
 useHead({
-  title: 'HKU AI Agent Platform - Home',
+  title: 'HKU 校园助手 - 首页',
   meta: [
     {
       name: 'description',
-      content: 'HKU AI Agent Platform offers HKU-focused chat assistants including the HKU AI Agent and AI Super Agent experiences.'
+      content: '香港大学校园智能助手，提供课程查询、校历信息、规章制度解答等服务'
     },
     {
       name: 'keywords',
-      content: 'HKU AI agent, campus assistant, AI super agent, HKU chatbot, student support, AI platform'
+      content: '香港大学,HKU,校园助手,课程查询,校历信息,校园服务,信息检索'
     }
   ]
 })
 
 const router = useRouter()
+const currentTime = ref('')
 
 const navigateTo = (path) => {
   router.push(path)
 }
+
+// 更新时间函数
+const updateTime = () => {
+  const now = new Date()
+  currentTime.value = now.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
+
+let timeInterval
+
+onMounted(() => {
+  updateTime()
+  timeInterval = setInterval(updateTime, 1000)
+})
+
+onUnmounted(() => {
+  if (timeInterval) {
+    clearInterval(timeInterval)
+  }
+})
 </script>
 
 <style scoped>
@@ -87,9 +144,8 @@ const navigateTo = (path) => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding-bottom: 80px;
   background-color: var(--cyber-dark);
-  background-image: 
+  background-image:
     linear-gradient(0deg, rgba(8, 17, 34, 0.9), rgba(5, 8, 20, 0.9)),
     url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect x="0" y="0" width="100" height="1" fill="%23111133" opacity="0.3"/><rect x="0" y="0" width="1" height="100" fill="%23111133" opacity="0.3"/></svg>');
   background-size: auto, 40px 40px;
@@ -117,7 +173,7 @@ const navigateTo = (path) => {
   font-size: 3.2rem;
   font-weight: 700;
   color: var(--cyber-light);
-  text-shadow: 
+  text-shadow:
     0 0 5px rgba(0, 240, 255, 0.7),
     0 0 10px rgba(0, 240, 255, 0.5),
     0 0 20px rgba(0, 240, 255, 0.3);
@@ -128,7 +184,7 @@ const navigateTo = (path) => {
 
 .glitch-title::before,
 .glitch-title::after {
-  content: 'HKU AI Agent';
+  content: 'HKU Campus Assistant';
   position: absolute;
   top: 0;
   left: 0;
@@ -189,30 +245,80 @@ const navigateTo = (path) => {
   right: 20%;
 }
 
+/* 信息展示区域样式 */
+.info-display {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.info-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-icon {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-title {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 5px;
+}
+
+.info-value {
+  font-size: 1.1rem;
+  color: white;
+  font-weight: 500;
+}
+
 .apps-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 32px;
-  max-width: 960px;
-  margin: 48px auto 0;
-  padding: 0 20px 60px;
+  gap: 50px;
+  max-width: 1200px;
+  margin: 60px auto;
+  padding: 0 20px;
   flex: 1;
   position: relative;
   z-index: 2;
 }
 
 .app-card {
-  width: 280px;
-  background-color: rgba(17, 23, 41, 0.72);
+  width: 340px;
+  background-color: rgba(17, 23, 41, 0.7);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  box-shadow: 
-    0 6px 24px rgba(0, 240, 255, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  padding: 24px;
+  box-shadow:
+    0 8px 32px rgba(0, 240, 255, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  padding: 30px;
   cursor: pointer;
-  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -228,7 +334,7 @@ const navigateTo = (path) => {
   height: 200%;
   background: radial-gradient(
     circle at center,
-    rgba(var(--neon-blue-rgb), 0.1) 0%,
+    rgba(0, 240, 255, 0.1) 0%,
     transparent 70%
   );
   opacity: 0;
@@ -238,7 +344,7 @@ const navigateTo = (path) => {
 
 .app-card:hover {
   transform: translateY(-15px) scale(1.03);
-  box-shadow: 
+  box-shadow:
     0 15px 50px rgba(0, 240, 255, 0.3),
     inset 0 0 0 1px rgba(0, 240, 255, 0.5);
 }
@@ -248,10 +354,10 @@ const navigateTo = (path) => {
 }
 
 .app-icon {
-  font-size: 3.4rem;
-  margin-bottom: 22px;
-  width: 80px;
-  height: 80px;
+  font-size: 4rem;
+  margin-bottom: 25px;
+  width: 90px;
+  height: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -260,44 +366,42 @@ const navigateTo = (path) => {
   z-index: 1;
 }
 
-.love-icon {
-  background: linear-gradient(135deg, #ff007a, #ff5722);
-  box-shadow: 0 0 20px rgba(255, 0, 122, 0.5);
+.assistant-icon {
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
 }
 
-.robot-icon {
-  background: linear-gradient(135deg, #00b2ff, #4f56ff);
-  box-shadow: 0 0 20px rgba(0, 178, 255, 0.5);
+.search-icon {
+  background: linear-gradient(135deg, #2196F3, #03A9F4);
+  box-shadow: 0 0 20px rgba(33, 150, 243, 0.5);
 }
-
 
 .app-info {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
   width: 100%;
 }
 
 .app-title {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.4rem;
-  font-weight: 600;
+  font-size: 1.6rem;
+  font-weight: bold;
   color: white;
-  margin-bottom: 10px;
-  text-shadow: 0 0 8px rgba(0, 240, 255, 0.45);
+  margin-bottom: 12px;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
 }
 
 .app-desc {
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.72);
-  line-height: 1.5;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
 }
-
 
 .app-button {
   background: linear-gradient(90deg, #0088ff, #00b2ff);
   color: white;
-  padding: 10px 22px;
-  border-radius: 28px;
+  padding: 12px 28px;
+  border-radius: 30px;
   font-weight: 500;
   transition: all 0.3s;
   margin-top: auto;
@@ -305,7 +409,7 @@ const navigateTo = (path) => {
   align-items: center;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(0, 240, 255, 0.24);
+  border: 1px solid rgba(0, 240, 255, 0.3);
 }
 
 .app-button::before {
@@ -398,18 +502,18 @@ const navigateTo = (path) => {
 
 @keyframes glitch {
   0% {
-    text-shadow: 
+    text-shadow:
       0 0 5px rgba(0, 240, 255, 0.7),
       0 0 10px rgba(0, 240, 255, 0.5);
   }
   50% {
-    text-shadow: 
+    text-shadow:
       0 0 5px rgba(0, 240, 255, 0.7),
       0 0 10px rgba(0, 240, 255, 0.5),
       0 0 20px rgba(0, 240, 255, 0.3);
   }
   100% {
-    text-shadow: 
+    text-shadow:
       0 0 5px rgba(0, 240, 255, 0.7),
       0 0 10px rgba(0, 240, 255, 0.5);
   }
@@ -456,22 +560,32 @@ const navigateTo = (path) => {
   .glitch-title {
     font-size: 2.5rem;
   }
-  
+
   .subtitle {
     font-size: 1rem;
   }
-  
+
+  .info-display {
+    flex-direction: column;
+    gap: 15px;
+    margin: 30px auto;
+  }
+
+  .info-card {
+    min-width: auto;
+  }
+
   .apps-container {
     gap: 30px;
     margin: 40px auto;
   }
-  
+
   .app-card {
     width: 100%;
     max-width: 420px;
     padding: 25px;
   }
-  
+
   .app-icon {
     font-size: 3.5rem;
     width: 80px;
@@ -483,42 +597,42 @@ const navigateTo = (path) => {
   .header {
     padding: 50px 15px 40px;
   }
-  
+
   .glitch-title {
     font-size: 2rem;
   }
-  
+
   .subtitle {
     font-size: 0.9rem;
     letter-spacing: 2px;
   }
-  
+
   .apps-container {
     margin: 30px auto;
     padding: 0 15px;
   }
-  
+
   .app-card {
     padding: 20px;
   }
-  
+
   .app-icon {
     font-size: 3rem;
     margin-bottom: 20px;
     width: 70px;
     height: 70px;
   }
-  
+
   .app-title {
     font-size: 1.4rem;
   }
-  
+
   .app-desc {
     font-size: 0.9rem;
   }
-  
+
   .circle-1, .circle-2, .circle-3 {
     opacity: 0.1;
   }
 }
-</style> 
+</style>

@@ -6,26 +6,26 @@ const routes = [
     name: 'Home',
     component: () => import('../views/Home.vue'),
     meta: {
-      title: 'é¦–é¡µ - é±¼çš®AIè¶…çº§æ™ºèƒ½ä½“åº”ç”¨å¹³å°',
-      description: 'é±¼çš®AIè¶…çº§æ™ºèƒ½ä½“åº”ç”¨å¹³å°æä¾›AIæ‹çˆ±å¤§å¸ˆå’ŒAIè¶…çº§æ™ºèƒ½ä½“æœåŠ¡ï¼Œæ»¡è¶³æ‚¨çš„å„ç§AIå¯¹è¯éœ€æ±‚'
+      title: 'Ê×Ò³ - HKU Ğ£Ô°ÖÇÄÜÖúÊÖ',
+      description: 'Ïã¸Û´óÑ§Ğ£Ô°ÖÇÄÜÖúÊÖ£¬Ìá¹©¿Î³Ì²éÑ¯¡¢Ğ£ÀúĞÅÏ¢¡¢¹æÕÂÖÆ¶È½â´ğµÈ·şÎñ'
     }
   },
   {
-    path: '/love-master',
-    name: 'LoveMaster',
+    path: '/hku-assistant',
+    name: 'HKUAssistant',
     component: () => import('../views/LoveMaster.vue'),
     meta: {
-      title: 'AIæ‹çˆ±å¤§å¸ˆ - é±¼çš®AIè¶…çº§æ™ºèƒ½ä½“åº”ç”¨å¹³å°',
-      description: 'AIæ‹çˆ±å¤§å¸ˆæ˜¯é±¼çš®AIè¶…çº§æ™ºèƒ½ä½“åº”ç”¨å¹³å°çš„ä¸“ä¸šæƒ…æ„Ÿé¡¾é—®ï¼Œå¸®ä½ è§£ç­”å„ç§æ‹çˆ±é—®é¢˜ï¼Œæä¾›æƒ…æ„Ÿå»ºè®®'
+      title: 'HKU Ğ¡ÖúÊÖ - Ğ£Ô°ÖÇÄÜÖúÊÖ',
+      description: 'HKU Ğ¡ÖúÊÖÊÇÏã¸Û´óÑ§Ğ£Ô°ÖÇÄÜÖúÊÖµÄºËĞÄ¹¦ÄÜ£¬½â´ğ¿Î³Ì°²ÅÅ¡¢Ñ§Ğ£¹æÕÂ¡¢Ğ£ÀúĞÅÏ¢µÈĞ£Ô°Éú»îÎÊÌâ'
     }
   },
   {
-    path: '/super-agent',
-    name: 'SuperAgent',
+    path: '/info-retrieval',
+    name: 'InfoRetrieval',
     component: () => import('../views/SuperAgent.vue'),
     meta: {
-      title: 'AIè¶…çº§æ™ºèƒ½ä½“ - é±¼çš®AIè¶…çº§æ™ºèƒ½ä½“åº”ç”¨å¹³å°',
-      description: 'AIè¶…çº§æ™ºèƒ½ä½“æ˜¯é±¼çš®AIè¶…çº§æ™ºèƒ½ä½“åº”ç”¨å¹³å°çš„å…¨èƒ½åŠ©æ‰‹ï¼Œèƒ½è§£ç­”å„ç±»ä¸“ä¸šé—®é¢˜ï¼Œæä¾›ç²¾å‡†å»ºè®®å’Œè§£å†³æ–¹æ¡ˆ'
+      title: 'ĞÅÏ¢¼ìË÷ - HKU Ğ£Ô°ÖÇÄÜÖúÊÖ',
+      description: 'ĞÅÏ¢¼ìË÷¹¦ÄÜ°ïÖúÄú¿ìËÙ²éÕÒÏã¸Û´óÑ§µÄÏà¹ØÎÄµµºÍĞÅÏ¢£¬°üÀ¨¿Î³Ì×ÊÁÏ¡¢¹æÕÂÖÆ¶È¡¢Ğ£Ô°ĞÂÎÅµÈ'
     }
   }
 ]
@@ -35,13 +35,13 @@ const router = createRouter({
   routes
 })
 
-// å…¨å±€å¯¼èˆªå®ˆå«ï¼Œè®¾ç½®æ–‡æ¡£æ ‡é¢˜
+// È«¾Öµ¼º½ÊØÎÀ£¬ÉèÖÃÎÄµµ±êÌâ
 router.beforeEach((to, from, next) => {
-  // è®¾ç½®é¡µé¢æ ‡é¢˜
+  // ÉèÖÃÒ³Ãæ±êÌâ
   if (to.meta.title) {
     document.title = to.meta.title
   }
   next()
 })
 
-export default router 
+export default router
