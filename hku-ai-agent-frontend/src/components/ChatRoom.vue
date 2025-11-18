@@ -97,7 +97,7 @@ const formatTime = (timestamp) => {
   return date.toLocaleTimeString('en-HK', { hour: '2-digit', minute: '2-digit' })
 }
 
-// Format message content, offering basic rich text support and sanitization
+// Format message content: sanitise input and preserve plain-text line breaks
 const formatMessageContent = (content) => {
   if (!content) {
     return ''
@@ -159,11 +159,6 @@ const formatMessageContent = (content) => {
 
     return `<a href="${cleanUrl}" target="_blank" class="link" rel="noopener noreferrer">${cleanUrl}</a>${trailingPunctuation}`
   })
-
-  escapedContent = escapedContent.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  escapedContent = escapedContent.replace(/^### (.+)$/gm, '<h4>$1</h4>')
-  escapedContent = escapedContent.replace(/^## (.+)$/gm, '<h3>$1</h3>')
-  escapedContent = escapedContent.replace(/^# (.+)$/gm, '<h2>$1</h2>')
 
   return escapedContent
 }

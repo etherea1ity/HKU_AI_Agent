@@ -10,6 +10,7 @@ C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\app\HkuApp.
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\app\LoveApp.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\chatmemory\FileBasedChatMemory.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\config\CorsConfig.java
+C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\config\ToolProviderFallbackConfig.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\constant\FileConstant.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\controller\AiController.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\controller\FileController.java
@@ -23,6 +24,7 @@ C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke\TestApiKey.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\rag\MultiQueryExpanderDemo.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\external\amap\AmapGeocodingFallbackClient.java
+C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\fallback\DisabledChatModel.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\HkuAiAgentApplication.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\rag\HkuAiContextualQueryAugmenterFactory.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\rag\HkuAiDocumentLoader.java

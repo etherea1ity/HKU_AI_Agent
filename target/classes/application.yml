@@ -22,6 +22,7 @@ spring:
 # 这里需要开启MCP，才能读取到mcp-servers.json文件并加载MCP服务
     mcp:
       client:
+        enabled: false # Disable MCP clients by default to avoid startup failures when MCP servers are absent
         stdio:
           servers-configuration: classpath:mcp-servers.json
 
