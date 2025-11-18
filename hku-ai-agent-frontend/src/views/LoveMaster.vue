@@ -34,7 +34,7 @@
       <div class="header">
         <div class="header-left">
           <button class="menu-button" @click="toggleSidebar" aria-label="Toggle sidebar">&#9776;</button>
-          <button class="back-button" @click="goBack">返回</button>
+          <button class="back-button" @click="goBack">Back</button>
         </div>
         <h1 class="title">HKU Campus Companion</h1>
         <div class="chat-meta">
@@ -94,7 +94,7 @@ useHead({
 
 const DESKTOP_BREAKPOINT = 1024
 const STORAGE_KEY = 'hku_campus_chat_history'
-const WELCOME_MESSAGE = '欢迎来到 HKU Campus Companion。\n\n我可以协助你查询课程安排、行政流程、校园设施与最新公告。\n\n告诉我你遇到的问题或想了解的主题，我们一起整理答案。'
+const WELCOME_MESSAGE = 'Welcome to HKU Campus Companion.\n\nI can help with course schedules, administrative procedures, campus facilities, and the latest announcements.\n\nTell me what you would like to know and we will find the answer together.'
 
 const SSE_TAGS = {
   THINKING_START: '[THINKING_START]',
@@ -127,7 +127,7 @@ const createEmptyDeepThinkingState = () => ({
   collapsed: false
 })
 
-// 默认显示深度思考面板（可折叠）
+// Default to showing the deep thinking panel (collapsible)
 const deepPanelAlwaysVisible = ref(true)
 const deepPanelVisible = computed(() => {
   return (
@@ -182,7 +182,7 @@ const parseRagSources = (raw) => {
 
     return list
       .map((item) => ({
-        title: String(item?.title || '相关资料'),
+        title: String(item?.title || 'Reference material'),
         snippet: String(item?.snippet || '').trim(),
         source: item?.source ? String(item.source) : ''
       }))
@@ -411,8 +411,8 @@ const sendMessage = (message) => {
       thinkingSteps.value = []
       ragSources.value = []
       const payload = data.slice(SSE_TAGS.THINKING_START.length).trim()
-      thinkingHeader.value = payload || 'HKU Campus Companion 深度思考中…'
-      thinkingSubtitle.value = '正在检索 HKU 知识库'
+      thinkingHeader.value = payload || 'HKU Campus Companion is analyzing...'
+      thinkingSubtitle.value = 'Searching the HKU knowledge base'
       isPanelCollapsed.value = false
       connectionStatus.value = 'connected'
       syncActiveConversation()
@@ -422,7 +422,7 @@ const sendMessage = (message) => {
     if (data.startsWith(SSE_TAGS.THINKING_END)) {
       isThinking.value = false
       const payload = data.slice(SSE_TAGS.THINKING_END.length).trim()
-      thinkingSubtitle.value = payload || '思考完成'
+      thinkingSubtitle.value = payload || 'Analysis complete'
       syncActiveConversation()
       return
     }
@@ -441,7 +441,7 @@ const sendMessage = (message) => {
       const sources = parseRagSources(payload)
       if (sources.length) {
         ragSources.value = sources
-        thinkingSubtitle.value = '已获取知识库线索'
+        thinkingSubtitle.value = 'Knowledge base insights ready'
         syncActiveConversation()
       }
       return
@@ -450,7 +450,7 @@ const sendMessage = (message) => {
     if (aiMessageIndex < messages.value.length) {
       if (isThinking.value) {
         isThinking.value = false
-        thinkingSubtitle.value = '输出回复中…'
+        thinkingSubtitle.value = 'Preparing response...'
       }
       messages.value[aiMessageIndex].content += data
       syncActiveConversation()

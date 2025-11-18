@@ -13,11 +13,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 网页搜索工具
+ * Web search helper backed by SearchAPI and the Baidu engine.
  */
 public class WebSearchTool {
 
-    // SearchAPI 的搜索接口地址
+    // Endpoint provided by SearchAPI
     private static final String SEARCH_API_URL = "https://www.searchapi.io/api/v1/search";
 
     private final String apiKey;
@@ -35,12 +35,12 @@ public class WebSearchTool {
         paramMap.put("engine", "baidu");
         try {
             String response = HttpUtil.get(SEARCH_API_URL, paramMap);
-            // 取出返回结果的前 5 条
+            // Extract the top organic results
             JSONObject jsonObject = JSONUtil.parseObj(response);
-            // 提取 organic_results 部分
+            // Pull the organic_results array for primary answers
             JSONArray organicResults = jsonObject.getJSONArray("organic_results");
             List<Object> objects = organicResults.subList(0, 2);
-            // 拼接搜索结果为字符串
+            // Serialize results so the LLM can parse them easily
             String result = objects.stream().map(obj -> {
                 JSONObject tmpJSONObject = (JSONObject) obj;
                 return tmpJSONObject.toString();

@@ -6,7 +6,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
 /**
- * 网页抓取工具
+ * Simple web scraping utility that returns readable text for the agent.
  */
 public class WebScrapingTool {
 
@@ -23,10 +23,10 @@ public class WebScrapingTool {
 
             StringBuilder builder = new StringBuilder();
             if (!title.isBlank()) {
-                builder.append("页面标题: ").append(title).append('\n');
+                builder.append("Page title: ").append(title).append('\n');
             }
-            builder.append("摘录内容: ").append(bodyText);
-            builder.append("\n\n原始链接: ").append(url);
+            builder.append("Excerpt: ").append(bodyText);
+            builder.append("\n\nOriginal link: ").append(url);
 
             return builder.toString();
         } catch (Exception e) {

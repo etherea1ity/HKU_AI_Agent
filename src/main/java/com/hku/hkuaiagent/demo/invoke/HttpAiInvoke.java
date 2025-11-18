@@ -5,45 +5,45 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 
 /**
- * HTTP 方式调用 AI
+ * Demonstrates calling DashScope over raw HTTP.
  */
 public class HttpAiInvoke {
 
     public static void main(String[] args) {
-        // API密钥
+        // API key used for the demo
         String apiKey = TestApiKey.API_KEY;
 
-        // 构建请求URL
+        // DashScope generation endpoint
         String url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
 
-        // 构建请求JSON数据
+        // Build the JSON request payload
         JSONObject inputJson = new JSONObject();
         JSONObject messagesJson = new JSONObject();
 
-        // 添加系统消息
+        // System message to steer the assistant
         JSONObject systemMessage = new JSONObject();
         systemMessage.set("role", "system");
         systemMessage.set("content", "You are a helpful assistant.");
 
-        // 添加用户消息
+        // User message that drives the response
         JSONObject userMessage = new JSONObject();
         userMessage.set("role", "user");
-        userMessage.set("content", "你是谁？");
+        userMessage.set("content", "Who are you?");
 
-        // 组装messages数组
+        // Assemble the messages array
         messagesJson.set("messages", JSONUtil.createArray().set(systemMessage).set(userMessage));
 
-        // 构建参数
+        // Basic result configuration
         JSONObject parametersJson = new JSONObject();
         parametersJson.set("result_format", "message");
 
-        // 构建完整请求体
+        // Final request body containing model, input, and parameters
         JSONObject requestJson = new JSONObject();
         requestJson.set("model", "qwen-plus");
         requestJson.set("input", messagesJson);
         requestJson.set("parameters", parametersJson);
 
-        // 发送请求
+        // Send the request
         String result = HttpRequest.post(url)
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
@@ -51,7 +51,7 @@ public class HttpAiInvoke {
                 .execute()
                 .body();
 
-        // 输出结果
+        // Print the raw JSON result
         System.out.println(result);
     }
 }

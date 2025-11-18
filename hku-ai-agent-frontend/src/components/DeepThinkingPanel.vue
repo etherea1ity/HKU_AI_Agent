@@ -12,12 +12,12 @@
         </div>
       </div>
       <button class="collapse-btn" type="button" @click.stop="emitToggle">
-        {{ collapsed ? '展开' : '收起' }}
+        {{ collapsed ? 'Expand' : 'Collapse' }}
       </button>
     </div>
     <div v-show="!collapsed" class="panel-body">
       <div v-if="steps.length" class="steps-block">
-        <div class="block-title">推理步骤</div>
+        <div class="block-title">Reasoning Steps</div>
         <div class="steps-list">
           <div v-for="(step, index) in steps" :key="`${step.time}-${index}`" class="step-item">
             <div class="step-indicator">
@@ -29,17 +29,17 @@
         </div>
       </div>
       <div v-if="ragSources.length" class="rag-block">
-        <div class="block-title">RAG 检索线索</div>
+        <div class="block-title">RAG Retrieval Insights</div>
         <div class="rag-list">
           <div v-for="(source, index) in ragSources" :key="index" class="rag-item">
             <div class="rag-title">{{ source.title }}</div>
             <div class="rag-snippet">{{ source.snippet }}</div>
-            <a v-if="source.source" class="rag-link" :href="source.source" target="_blank" rel="noopener noreferrer">查看来源 →</a>
+            <a v-if="source.source" class="rag-link" :href="source.source" target="_blank" rel="noopener noreferrer">View source -></a>
           </div>
         </div>
       </div>
       <div v-if="!steps.length && !ragSources.length" class="empty-block">
-        暂无可展示的推理或检索信息。
+        No reasoning or retrieval details are available yet.
       </div>
     </div>
   </div>
@@ -85,7 +85,7 @@ const headerText = computed(() => {
   if (props.header) {
     return props.header
   }
-  return props.isThinking ? '正在深度思考…' : '推理完成'
+  return props.isThinking ? 'Thinking deeply...' : 'Analysis complete'
 })
 
 const emitToggle = () => {

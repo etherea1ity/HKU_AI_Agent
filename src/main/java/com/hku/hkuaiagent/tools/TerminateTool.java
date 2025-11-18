@@ -3,7 +3,7 @@ package com.hku.hkuaiagent.tools;
 import org.springframework.ai.tool.annotation.Tool;
 
 /**
- * 终止工具（作用是让自主规划智能体能够合理地中断）
+ * Utility tool that allows autonomous agents to end a workflow explicitly.
  */
 public class TerminateTool {
 
@@ -12,7 +12,7 @@ public class TerminateTool {
             "When you have finished all the tasks, call this tool to end the work.
             """)
     public String doTerminate() {
-        return "任务结束";
+        return "Task completed";
     }
 }
 

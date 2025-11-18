@@ -25,6 +25,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Component
@@ -52,6 +53,7 @@ public class HkuApp {
 
     private static final String SYSTEM_PROMPT = """
             You are 'HKU Campus Companion', an AI concierge for The University of Hong Kong.
+            Communicate exclusively in fluent English, even when the user writes in another language.
 
             STRICT RULES:
             1. If the user mentions a course code like COMP7103, COMP7106, etc., ALWAYS:
@@ -69,68 +71,78 @@ public class HkuApp {
             5. Always cite the document filename in parentheses when referencing facts.
 
             RESPONSE STYLE:
+            - Always produce responses in English sentences.
             - Provide clear prose paragraphs or short numbered lists when appropriate.
             - Avoid Markdown decorations such as bold, italics, bullet symbols (*, -, #) and code fences.
             - Use consistent spacing and punctuation so that the output reads naturally in plain text.
             """;
 
     public HkuApp(ChatModel dashscopeChatModel) {
+        ChatModel safeModel = Objects.requireNonNull(dashscopeChatModel, "dashscopeChatModel");
         MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder()
                 .chatMemoryRepository(new InMemoryChatMemoryRepository())
                 .maxMessages(20)
                 .build();
-        this.chatClient = ChatClient.builder(dashscopeChatModel)
+        this.chatClient = ChatClient.builder(safeModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         new MyLoggerAdvisor())
                 .build();
     }
 
-    /* ===================== 对外聊天入口（含强制拦截） ===================== */
+    /* ===================== Public Chat Entrypoint (with guard rails) ===================== */
 
     public String doChat(String message, String chatId) {
-        /* ⬇️ 强制拦截学期 / 课程前缀 ⬇️ */
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(chatId, "chatId");
+        /* Guard: redirect semester or course-specific queries */
         String lower = message.toLowerCase();
         if (lower.contains("semester 2") || lower.contains("s2") || lower.contains("second semester") || lower.contains("spring semester")) {
-            log.info("[走向] 强制拦截 semester 2 → 走 doChatWithRag");
+            log.info("[Routing] Detected semester 2 query, delegating to doChatWithRag");
             return doChatWithRag(message, chatId);
         }
         if (lower.contains("semester 1") || lower.contains("s1") || lower.contains("first semester") || lower.contains("fall semester")) {
-            log.info("[走向] 强制拦截 semester 1 → 走 doChatWithRag");
+            log.info("[Routing] Detected semester 1 query, delegating to doChatWithRag");
             return doChatWithRag(message, chatId);
         }
-        if (lower.contains("comp7103")) return doChatWithCoursePrefix(message, chatId, "COMP7103");
-        if (lower.contains("comp7106")) return doChatWithCoursePrefix(message, chatId, "COMP7106");
+        if (lower.contains("comp7103")) {
+            return doChatWithCoursePrefix(message, chatId, "COMP7103");
+        }
+        if (lower.contains("comp7106")) {
+            return doChatWithCoursePrefix(message, chatId, "COMP7106");
+        }
 
-    /* 原逻辑保持不变 */
-    var promptBuilder = chatClient.prompt()
-        .user(message)
-        .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId));
+        /* Core response pipeline */
+        var promptBuilder = chatClient.prompt()
+                .user(message)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId));
 
-    if (hkuAiVectorStore != null) {
-        promptBuilder = promptBuilder
-            .advisors(new QuestionAnswerAdvisor(hkuAiVectorStore))
-            .advisors(HkuAiRagCustomAdvisorFactory.createHkuAiRagCustomAdvisor(hkuAiVectorStore, "course"));
-    }
+        if (hkuAiVectorStore != null) {
+            promptBuilder = promptBuilder
+                    .advisors(new QuestionAnswerAdvisor(hkuAiVectorStore))
+                    .advisors(HkuAiRagCustomAdvisorFactory.createHkuAiRagCustomAdvisor(hkuAiVectorStore, "course"));
+        }
 
-    ChatResponse resp = promptBuilder
-        .call()
-        .chatResponse();
+        ChatResponse resp = promptBuilder
+                .call()
+                .chatResponse();
 
-    String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
-        ? resp.getResult().getOutput().getText()
-        : "";
-    return sanitizeResponseText(output);
+        String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+                ? resp.getResult().getOutput().getText()
+                : "";
+        return sanitizeResponseText(output);
     }
 
     public Flux<String> doChatByStream(String message, String chatId) {
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(chatId, "chatId");
         String lower = message.toLowerCase();
         if (lower.contains("semester 2") || lower.contains("s2") || lower.contains("second semester") || lower.contains("spring semester")) {
-            log.info("[走向] 强制拦截 semester 2 → 走 doChatWithRagStream");
+            log.info("[Routing] Detected semester 2 query, delegating to doChatWithRagStream");
             return doChatWithRagStream(message, chatId);
         }
         if (lower.contains("semester 1") || lower.contains("s1") || lower.contains("first semester") || lower.contains("fall semester")) {
-            log.info("[走向] 强制拦截 semester 1 → 走 doChatWithRagStream");
+            log.info("[Routing] Detected semester 1 query, delegating to doChatWithRagStream");
             return doChatWithRagStream(message, chatId);
         }
         if (lower.contains("comp7103")) {
@@ -140,31 +152,34 @@ public class HkuApp {
             return Flux.just(doChatWithCoursePrefix(message, chatId, "COMP7106"));
         }
 
-    var promptBuilder = chatClient.prompt()
-        .user(message)
-        .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId));
+        var promptBuilder = chatClient.prompt()
+                .user(message)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId));
 
-    if (hkuAiVectorStore != null) {
-        promptBuilder = promptBuilder
-            .advisors(new QuestionAnswerAdvisor(hkuAiVectorStore))
-            .advisors(HkuAiRagCustomAdvisorFactory.createHkuAiRagCustomAdvisor(hkuAiVectorStore, "course"));
+        if (hkuAiVectorStore != null) {
+            promptBuilder = promptBuilder
+                    .advisors(new QuestionAnswerAdvisor(hkuAiVectorStore))
+                    .advisors(HkuAiRagCustomAdvisorFactory.createHkuAiRagCustomAdvisor(hkuAiVectorStore, "course"));
+        }
+
+        return promptBuilder
+                .stream()
+                .content()
+                .map(this::sanitizeStreamChunk);
     }
 
-    return promptBuilder
-        .stream()
-        .content()
-        .map(this::sanitizeStreamChunk);
-    }
-
-    /* ===================== 手动加载文档 + 前缀过滤（兼容 1.0.0） ===================== */
+    /* ===================== Manual document load with prefix filtering ===================== */
 
     public String doChatWithCoursePrefix(String message, String chatId, String coursePrefix) {
-        String targetPrefix = "course_" + coursePrefix.toUpperCase(); // 如 course_COMP7103
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(chatId, "chatId");
+        Objects.requireNonNull(coursePrefix, "coursePrefix");
+        String targetPrefix = "course_" + coursePrefix.toUpperCase();
 
-        // 1️⃣ 手动重新加载所有文档（不走 VectorStore）
+        // Step 1: Reload all documents manually (skip the VectorStore)
         List<Document> allDocs = hkuAiDocumentLoader.loadMarkdowns();
 
-        // 2️⃣ 手动过滤 filename 前缀
+        // Step 2: Filter documents by filename prefix
         List<Document> filtered = allDocs.stream()
                 .filter(d -> {
                     String fn = (String) d.getMetadata().get("filename");
@@ -173,44 +188,50 @@ public class HkuApp {
                 .collect(Collectors.toList());
 
         if (filtered.isEmpty()) {
-            return "未找到课程前缀 " + coursePrefix + " 的任何版本。";
+            return "No versions were found for course prefix " + coursePrefix + '.';
         }
 
-        // 3️⃣ 构造增强上下文
+        // Step 3: Build an augmented context from the filtered documents
         StringBuilder sb = new StringBuilder();
         for (Document d : filtered) {
             sb.append(d.getText()).append("\n------\n");
         }
-        String augmented = "以下是匹配的课程文档：\n" + sb;
+        String augmented = "The following course documents were matched:\n" + sb;
 
-        // 4️⃣ 发给模型
-    ChatResponse resp = chatClient.prompt()
+        // Step 4: Send request to the model
+        ChatResponse resp = chatClient.prompt()
                 .system(SYSTEM_PROMPT + "\n" + augmented)
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
                 .chatResponse();
-    String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
-        ? resp.getResult().getOutput().getText()
-        : "";
-    return sanitizeResponseText(output);
+        String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+                ? resp.getResult().getOutput().getText()
+                : "";
+        return sanitizeResponseText(output);
     }
 
-    /* ===================== 带学期过滤的 RAG 入口（已放大 topK） ===================== */
+    /* ===================== RAG entrypoint with semester filtering ===================== */
 
     public String doChatWithRag(String message, String chatId) {
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(chatId, "chatId");
         List<String> chunks = doChatWithRagStream(message, chatId).collectList().block();
         if (chunks == null || chunks.isEmpty()) {
             return "";
         }
-    return sanitizeResponseText(String.join("", chunks));
+        return sanitizeResponseText(String.join("", chunks));
     }
 
     public Flux<String> doChatWithRagStream(String message, String chatId) {
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(chatId, "chatId");
         if (hkuAiVectorStore == null) {
-            return Flux.just("RAG 知识库未启用，请检查配置后重试。");
+            return Flux.just("The RAG knowledge base is disabled. Please verify the configuration and try again.");
         }
         String rewritten = queryRewriter != null ? queryRewriter.doQueryRewrite(message) : message;
+        String safeRewritten = Objects.requireNonNullElse(rewritten, message);
+        Objects.requireNonNull(safeRewritten, "safeRewritten");
 
         String lower = message.toLowerCase();
         boolean isS2 = lower.contains("semester 2") || lower.contains("s2") || lower.contains("second semester") || lower.contains("spring semester");
@@ -228,14 +249,14 @@ public class HkuApp {
             promptBuilder = promptBuilder.system(SYSTEM_PROMPT + "\n\n" + manualContext);
         }
 
-    return promptBuilder
-                .user(rewritten)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
-                .advisors(new MyLoggerAdvisor())
-                .advisors(advisor)
-                .stream()
-        .content()
-        .map(this::sanitizeStreamChunk);
+        return promptBuilder
+                .user(safeRewritten)
+            .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
+            .advisors(new MyLoggerAdvisor())
+            .advisors(advisor)
+            .stream()
+            .content()
+            .map(this::sanitizeStreamChunk);
     }
 
     private String buildSemesterCourseContext(String semester) {
@@ -268,7 +289,7 @@ public class HkuApp {
             String intro = extractIntroduction(doc.getText());
             sb.append("- ").append(courseCode != null ? courseCode : "Unknown Code");
             if (courseName != null) {
-                sb.append(" – ").append(courseName);
+                sb.append(" - ").append(courseName);
             }
             if (instructor != null) {
                 sb.append(" (Instructor: ").append(instructor).append(")");
@@ -373,23 +394,28 @@ public class HkuApp {
         return text.substring(0, maxLength) + "...";
     }
 
-    /* ===================== 工具 / MCP 入口 ===================== */
+    /* ===================== Tool / MCP entrypoints ===================== */
 
     public String doChatWithTools(String message, String chatId) {
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(chatId, "chatId");
+        ToolCallback[] safeTools = Objects.requireNonNull(allTools, "allTools");
         ChatResponse resp = chatClient.prompt()
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(new MyLoggerAdvisor())
-                .toolCallbacks(allTools)
+                .toolCallbacks(safeTools)
                 .call()
                 .chatResponse();
-    String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
-        ? resp.getResult().getOutput().getText()
-        : "";
-    return sanitizeResponseText(output);
+        String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+                ? resp.getResult().getOutput().getText()
+                : "";
+        return sanitizeResponseText(output);
     }
 
     public String doChatWithMcp(String message, String chatId) {
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(chatId, "chatId");
         ChatResponse resp = chatClient.prompt()
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
@@ -397,19 +423,21 @@ public class HkuApp {
                 .toolCallbacks(toolCallbackProvider)
                 .call()
                 .chatResponse();
-    String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
-        ? resp.getResult().getOutput().getText()
-        : "";
-    return sanitizeResponseText(output);
+        String output = resp != null && resp.getResult() != null && resp.getResult().getOutput() != null
+                ? resp.getResult().getOutput().getText()
+                : "";
+        return sanitizeResponseText(output);
     }
 
-    /* ===================== 结构化恋爱报告（保留原签名） ===================== */
+    /* ===================== Structured relationship report (legacy signature) ===================== */
 
     public record LoveReport(String title, List<String> suggestions) {}
 
     public LoveReport doChatWithReport(String message, String chatId) {
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(chatId, "chatId");
         LoveReport report = chatClient.prompt()
-                .system(SYSTEM_PROMPT + "每次对话后都要生成恋爱结果，标题为{用户名}的恋爱报告，内容为建议列表")
+                .system(SYSTEM_PROMPT + "After each conversation, produce a relationship result with the title '{username} Relationship Report' and a list of suggestions.")
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
@@ -436,12 +464,16 @@ public class HkuApp {
 
     private String basicSanitize(String text) {
         String sanitized = text
-                .replace("**", "")
-                .replace('\u00A0', ' ');
-        sanitized = sanitized.replaceAll("(?m)^\\s*[-*]\\s+", "");
-        sanitized = sanitized.replaceAll("(?m)^\\s*#+\\s+", "");
+            .replace("**", "")
+            .replace("```", "")
+            .replace('\u00A0', ' ');
+        sanitized = sanitized.replaceAll("(?m)^\\s*[-*]\\s+", "- ");
+        sanitized = sanitized.replaceAll("(?m)^\\s*#+\\s*", "");
+        sanitized = sanitized.replaceAll("---+", "\n\n");
+        sanitized = sanitized.replaceAll("[\\t\\f]+", " ");
         sanitized = sanitized.replaceAll(" {2,}", " ");
-        sanitized = sanitized.replaceAll("\\s+\\n", "\n");
-        return sanitized;
+        sanitized = sanitized.replaceAll(" *\\n *", "\n");
+        sanitized = sanitized.replaceAll("\\n{3,}", "\n\n");
+        return sanitized.trim();
     }
 }

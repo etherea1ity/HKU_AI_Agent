@@ -4,7 +4,7 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 
 /**
- * HKU 校园助手上下文查询增强器工厂。
+ * Factory for building the HKU contextual query augmenter.
  */
 public class HkuAiContextualQueryAugmenterFactory {
 

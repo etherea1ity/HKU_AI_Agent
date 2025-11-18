@@ -7,9 +7,10 @@ import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpande
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
- * 查询扩展器 Demo
+ * Demo component showcasing how to expand a query into multiple variants.
  */
 @Component
 public class MultiQueryExpanderDemo {
@@ -17,16 +18,15 @@ public class MultiQueryExpanderDemo {
     private final ChatClient.Builder chatClientBuilder;
 
     public MultiQueryExpanderDemo(ChatModel dashscopeChatModel) {
-        this.chatClientBuilder = ChatClient.builder(dashscopeChatModel);
+        this.chatClientBuilder = ChatClient.builder(Objects.requireNonNull(dashscopeChatModel));
     }
 
     public List<Query> expand(String query) {
         MultiQueryExpander queryExpander = MultiQueryExpander.builder()
-                .chatClientBuilder(chatClientBuilder)
+                .chatClientBuilder(Objects.requireNonNull(chatClientBuilder))
                 .numberOfQueries(3)
                 .build();
-        List<Query> queries = queryExpander.expand(new Query("谁是程序员鱼皮啊？"));
-        return queries;
+        return queryExpander.expand(new Query(Objects.requireNonNull(query)));
     }
 }
 

@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * HKU 校园助手文档加载器（适配 HKU Markdown 资料）
+ * Loader that ingests HKU markdown documents into vector-ready Document objects.
  */
 @Component
 @Slf4j
@@ -26,7 +26,7 @@ public class HkuAiDocumentLoader {
     }
 
     /**
-     * 加载多篇 Markdown 文档
+     * Load every markdown document packaged in the application resources.
      */
     public List<Document> loadMarkdowns() {
         List<Document> allDocuments = new ArrayList<>();
@@ -46,15 +46,15 @@ public class HkuAiDocumentLoader {
                 MarkdownDocumentReader markdownDocumentReader = new MarkdownDocumentReader(resource, config);
                 allDocuments.addAll(markdownDocumentReader.get());
             }
-            log.info("成功加载 {} 篇Markdown文档", allDocuments.size());
+            log.info("Loaded {} markdown documents", allDocuments.size());
             for (Document d : allDocuments) {
-                log.info("加载文档：{} -> category={}  semester={}",
+                log.info("Document loaded: {} -> category={}  semester={}",
                         d.getMetadata().get("filename"),
                         d.getMetadata().get("category"),
                         d.getMetadata().get("semester"));
             }
         } catch (IOException e) {
-            log.error("Markdown 文档加载失败", e);
+            log.error("Failed to load markdown documents", e);
         }
         return allDocuments;
     }

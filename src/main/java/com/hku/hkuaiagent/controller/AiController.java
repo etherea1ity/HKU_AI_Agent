@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
+import java.util.Objects;
 
 import java.io.IOException;
 
@@ -31,22 +32,22 @@ public class AiController {
     @Resource
     private ChatModel dashscopeChatModel;
 
-    // MCP服务
+    // MCP tool provider injected via Spring
     @Resource
     private ToolCallbackProvider toolCallbackProvider;
     
-    // 缓存 HkuManus 实例，按 chatId 存储（添加对话记忆支持）
+    // Cache Manus agent instances per chatId to preserve conversation memory
     private final java.util.Map<String, HkuManus> manusCache = new java.util.concurrent.ConcurrentHashMap<>();
 
-    // 缓存 LoveCampusAgent 实例，按 chatId 存储（使 love agent 支持工具调用）
+    // Cache LoveCampusAgent instances per chatId so each session can call tools independently
     private final java.util.Map<String, com.hku.hkuaiagent.agent.LoveCampusAgent> loveCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
-     * 同步调用 AI 恋爱大师应用
+     * Handle synchronous chat requests for the Love App agent.
      *
-     * @param message
-     * @param chatId
-     * @return
+     * @param message user prompt content
+     * @param chatId conversation identifier
+     * @return agent response content
      */
     @GetMapping("/love_app/chat/sync")
     public String doChatWithLoveAppSync(String message, String chatId) {
@@ -55,11 +56,11 @@ public class AiController {
     }
 
     /**
-     * SSE 流式调用 AI 恋爱大师应用
+     * Stream responses from the Love App agent using SSE.
      *
-     * @param message
-     * @param chatId
-     * @return
+     * @param message user prompt content
+     * @param chatId conversation identifier
+     * @return SSE emitter that streams the agent response
      */
     @GetMapping(value = "/love_app/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter doChatWithLoveAppSSE(String message, String chatId) {
@@ -70,17 +71,17 @@ public class AiController {
         }
 
         com.hku.hkuaiagent.agent.LoveCampusAgent loveAgent = loveCache.computeIfAbsent(chatId,
-                id -> new com.hku.hkuaiagent.agent.LoveCampusAgent(allTools, toolCallbackProvider, dashscopeChatModel));
+            id -> new com.hku.hkuaiagent.agent.LoveCampusAgent(allTools, toolCallbackProvider, dashscopeChatModel));
 
         return loveAgent.runStream(message);
     }
 
     /**
-     * SSE 流式调用 AI 恋爱大师应用
+     * Stream responses from the Love App agent using reactive Server-Sent Events.
      *
-     * @param message
-     * @param chatId
-     * @return
+     * @param message user prompt content
+     * @param chatId conversation identifier
+     * @return server-sent event flux with response chunks
      */
     @GetMapping(value = "/love_app/chat/server_sent_event")
     public Flux<ServerSentEvent<String>> doChatWithLoveAppServerSentEvent(String message, String chatId) {
@@ -92,58 +93,58 @@ public class AiController {
     }
 
     /**
-     * SSE 流式调用 AI 恋爱大师应用
+     * Stream responses from the Love App agent using a Spring MVC SseEmitter.
      *
-     * @param message
-     * @param chatId
-     * @return
+     * @param message user prompt content
+     * @param chatId conversation identifier
+     * @return SSE emitter that streams the agent response
      */
     @GetMapping(value = "/love_app/chat/sse_emitter")
     public SseEmitter doChatWithLoveAppServerSseEmitter(String message, String chatId) {
         log.info("[AiController] Emitter");
-        // 创建一个超时时间较长的 SseEmitter
-        SseEmitter sseEmitter = new SseEmitter(180000L); // 3 分钟超时
-        // 获取 Flux 响应式数据流并且直接通过订阅推送给 SseEmitter
+        // Use a generous timeout so longer conversations are not interrupted
+        SseEmitter sseEmitter = new SseEmitter(180000L); // 3-minute timeout
+        // Subscribe to the reactive stream and forward each chunk to the emitter
         loveApp.doChatByStream(message, chatId)
                 .subscribe(chunk -> {
                     try {
-                        sseEmitter.send(chunk);
+                        sseEmitter.send(Objects.requireNonNull(chunk, "sseChunk"));
                     } catch (IOException e) {
                         sseEmitter.completeWithError(e);
                     }
                 }, sseEmitter::completeWithError, sseEmitter::complete);
-        // 返回
+        // Return the emitter to the caller
         return sseEmitter;
     }
 
     /**
-     * 流式调用 Manus 超级智能体（支持对话记忆）
+     * Stream responses from the Manus super-agent while preserving conversation memory per chatId.
      *
-     * @param message 用户消息
-     * @param chatId 会话ID（用于区分不同对话，支持多轮对话记忆）
-     * @return SSE流式响应
+     * @param message user prompt content
+     * @param chatId conversation identifier used to retain state across turns
+     * @return SSE emitter that streams the agent response
      */
     @GetMapping("/manus/chat")
     public SseEmitter doChatWithManus(String message, String chatId) {
         log.info("[AiController] Manus - chatId: {}", chatId);
         
-        // 如果没有提供 chatId，生成一个默认的
+        // Fall back to a default chatId when none is provided
         if (chatId == null || chatId.isEmpty()) {
             chatId = "default";
         }
         
-        // 从缓存中获取或创建新的 HkuManus 实例
-        HkuManus hkuManus = manusCache.computeIfAbsent(chatId, 
+        // Retrieve or create the Manus agent for this chat session
+        HkuManus hkuManus = manusCache.computeIfAbsent(chatId,
             id -> new HkuManus(allTools, toolCallbackProvider, dashscopeChatModel));
         
         return hkuManus.runStream(message);
     }
     
     /**
-     * 清除指定会话的对话历史
+     * Clear the cached Manus agent for the provided chatId so the next request starts fresh.
      *
-     * @param chatId 会话ID
-     * @return 清除结果
+     * @param chatId conversation identifier
+     * @return acknowledgement message
      */
     @GetMapping("/manus/clear")
     public String clearManusChat(String chatId) {
@@ -152,7 +153,7 @@ public class AiController {
         }
         manusCache.remove(chatId);
         log.info("[AiController] Cleared chat history for chatId: {}", chatId);
-        return "对话历史已清除";
+        return "Chat history cleared.";
     }
 }
 

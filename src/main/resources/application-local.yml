@@ -4,3 +4,5 @@ hku:
       api-key: sk-b7f54bd5cfce431faff6f685dd1aac34
     search:
       api-key: zCx884GEA4GxxCDtqNXGjyGk
+    rag:
+      enabled: true

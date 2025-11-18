@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * PDF 生成工具（支持中文、Markdown风格）
+ * PDF generation tool supporting Chinese content and lightweight Markdown syntax.
  */
 @Slf4j
 public class PDFGenerationTool {
@@ -37,7 +37,7 @@ public class PDFGenerationTool {
             @ToolParam(description = "Optional title for the PDF document. If not provided, will use 'Document' as default.", required = false) 
             String title) {
         
-        // 生成唯一文件名
+        // Generate a unique filename to avoid collisions
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String uniqueId = IdUtil.simpleUUID().substring(0, 8);
         String fileName = "pdf_" + timestamp + "_" + uniqueId + ".pdf";
@@ -46,33 +46,33 @@ public class PDFGenerationTool {
         String filePath = fileDir + "/" + fileName;
         
         try {
-            // 创建目录
+            // Ensure the output directory exists
             FileUtil.mkdir(fileDir);
             
-            // 创建 PdfWriter 和 PdfDocument 对象
+            // Create PdfWriter and PdfDocument handles
             try (PdfWriter writer = new PdfWriter(filePath);
                  PdfDocument pdf = new PdfDocument(writer);
                  Document document = new Document(pdf)) {
                 
-                // 使用支持中文的字体
+                // Load fonts that support Chinese characters when possible
                 PdfFont font;
                 PdfFont boldFont;
                 try {
-                    // 尝试使用内置的中文字体（需要 itext7-font-asian 依赖）
+                    // Attempt to load bundled Chinese fonts (requires itext7-font-asian)
                     font = PdfFontFactory.createFont("STSongStd-Light", "UniGB-UCS2-H");
                     boldFont = PdfFontFactory.createFont("STSongStd-Light", "UniGB-UCS2-H");
-                    log.info("成功加载中文字体 STSongStd-Light");
+                    log.info("Successfully loaded Chinese font STSongStd-Light");
                 } catch (Exception e) {
-                    log.warn("无法加载 STSongStd-Light，尝试使用系统字体: {}", e.getMessage());
+                    log.warn("Unable to load STSongStd-Light, trying a system font: {}", e.getMessage());
                     try {
-                        // 尝试使用 Windows 系统字体
-                        String fontPath = "C:/Windows/Fonts/simhei.ttf"; // 黑体
+                        // Fallback to a Windows system font
+                        String fontPath = "C:/Windows/Fonts/simhei.ttf"; // SimHei
                         font = PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
                         boldFont = PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
-                        log.info("成功加载系统字体: {}", fontPath);
+                        log.info("Successfully loaded system font: {}", fontPath);
                     } catch (Exception e2) {
-                        log.error("无法加载任何中文字体，使用默认字体（不支持中文）: {}", e2.getMessage());
-                        // 如果都失败，使用Helvetica作为后备（不支持中文）
+                        log.error("Unable to load any Chinese-capable font, falling back to Helvetica: {}", e2.getMessage());
+                        // Final fallback: Helvetica (does not support Chinese characters)
                         font = PdfFontFactory.createFont("Helvetica", PdfEncodings.WINANSI);
                         boldFont = PdfFontFactory.createFont("Helvetica-Bold", PdfEncodings.WINANSI);
                     }
@@ -80,7 +80,7 @@ public class PDFGenerationTool {
                 
                 document.setFont(font);
                 
-                // 添加标题
+                // Optional document title
                 if (title != null && !title.isEmpty()) {
                     Paragraph titlePara = new Paragraph(title)
                             .setFont(boldFont)
@@ -91,50 +91,50 @@ public class PDFGenerationTool {
                     document.add(titlePara);
                 }
                 
-                // 添加生成时间
-                String timeStr = "生成时间: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                // Creation timestamp for traceability
+                String timeStr = "Generated on: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                 Paragraph timePara = new Paragraph(timeStr)
                         .setFontSize(10)
                         .setFontColor(ColorConstants.GRAY)
                         .setMarginBottom(20);
                 document.add(timePara);
                 
-                // 解析并添加内容（支持简单的Markdown格式）
+                // Parse and render the Markdown-like content
                 parseAndAddContent(document, content, font, boldFont);
                 
-                log.info("PDF生成成功: {}", filePath);
+                log.info("PDF generated successfully: {}", filePath);
             }
             
-            // 返回可下载的URL（对文件名进行URL编码以支持中文）
+            // Build a downloadable URL (URL-encode to handle non-ASCII names)
             String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
             String downloadUrl = "http://localhost:8123/api/file/download?fileName=" + encodedFileName + "&type=pdf";
             
-            // 返回带有特殊标记的格式，前端会将其转换为下载按钮
-            return String.format("✅ PDF生成成功！\n\n📄 文件名: %s\n\n[DOWNLOAD_LINK]%s[/DOWNLOAD_LINK]", 
+            // Return the special marker format recognised by the frontend for download buttons
+            return String.format("✅ PDF generated successfully!\n\n📄 File name: %s\n\n[DOWNLOAD_LINK]%s[/DOWNLOAD_LINK]", 
                     fileName, downloadUrl);
             
         } catch (Exception e) {
-            log.error("生成PDF失败", e);
-            return "❌ 生成PDF失败: " + e.getMessage();
+            log.error("Failed to generate PDF", e);
+            return "❌ Failed to generate PDF: " + e.getMessage();
         }
     }
     
     /**
-     * 解析内容并添加到文档（支持简单的Markdown格式）
+     * Parse the incoming text and add Markdown-like sections to the PDF document.
      */
     private void parseAndAddContent(Document document, String content, PdfFont normalFont, PdfFont boldFont) throws IOException {
         String[] lines = content.split("\n");
         
         for (String line : lines) {
             if (line.trim().isEmpty()) {
-                // 空行，添加间距
+                // Blank line → add spacing paragraph
                 document.add(new Paragraph(" ").setMarginBottom(5));
                 continue;
             }
             
             Paragraph paragraph = new Paragraph();
             
-            // 处理标题
+            // Headers
             if (line.startsWith("### ")) {
                 paragraph.add(new Text(line.substring(4))
                         .setFont(boldFont)
@@ -154,24 +154,24 @@ public class PDFGenerationTool {
                         .setFontColor(ColorConstants.BLUE));
                 paragraph.setMarginTop(15).setMarginBottom(12);
             } else {
-                // 处理粗体文本 **text**
+                // Handle bold text **text**
                 String processedLine = line;
                 while (processedLine.contains("**")) {
                     int start = processedLine.indexOf("**");
                     int end = processedLine.indexOf("**", start + 2);
                     if (end != -1) {
-                        // 添加粗体前的文本
+                        // Plain text before the bold section
                         if (start > 0) {
                             paragraph.add(new Text(processedLine.substring(0, start)).setFont(normalFont));
                         }
-                        // 添加粗体文本
+                        // Bold portion
                         paragraph.add(new Text(processedLine.substring(start + 2, end)).setFont(boldFont));
                         processedLine = processedLine.substring(end + 2);
                     } else {
                         break;
                     }
                 }
-                // 添加剩余文本
+                // Remaining text (no more bold markers)
                 if (!processedLine.isEmpty()) {
                     paragraph.add(new Text(processedLine).setFont(normalFont));
                 }

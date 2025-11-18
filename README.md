@@ -11,7 +11,7 @@
 > 如果此前已安装过 JDK8，需要把 `JAVA_HOME` 指向 JDK21，并把 `%JAVA_HOME%\bin` 置于 `PATH` 最前面，否则 Spring Boot 插件会因 class file 版本过低而退出。
 
 ## 后端启动
-
+![1763353541281](image/README/1763353541281.png)
 1. 打开 PowerShell，进入项目根目录：
 
 2. 启动 Spring Boot 应用（已关闭测试用例，加快启动速度）：
@@ -19,7 +19,7 @@
    ```powershell
    .\mvnw.cmd spring-boot:run -DskipTests
    ```
-
+![1763350252460](image/README/1763350252460.png)
 3. 控制台出现 `Tomcat started on port 8123` 后表示启动成功，接口可通过 `http://localhost:8123/api` 访问。保留该终端以保持后端运行，如需停止按 `Ctrl+C`。
 
 ### RAG 功能开关

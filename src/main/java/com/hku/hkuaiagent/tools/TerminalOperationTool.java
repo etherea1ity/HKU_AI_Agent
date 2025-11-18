@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 /**
- * 终端操作工具
+ * Utility that lets agents run shell commands on the host.
  */
 public class TerminalOperationTool {
 

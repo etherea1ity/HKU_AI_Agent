@@ -8,47 +8,54 @@ import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
 import org.springframework.ai.chat.client.advisor.api.StreamAdvisor;
 import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain;
+import org.springframework.lang.NonNull;
 import reactor.core.publisher.Flux;
 
+import java.util.Objects;
+
 /**
- * 自定义日志 Advisor
- * 打印 info 级别日志、只输出单次用户提示词和 AI 回复的文本
+ * Custom logging advisor that prints info-level logs for each prompt and response.
  */
 @Slf4j
 public class MyLoggerAdvisor implements CallAdvisor, StreamAdvisor {
 
-	@Override
-	public String getName() {
-		return this.getClass().getSimpleName();
-	}
+    @Override
+    public @NonNull String getName() {
+        return Objects.requireNonNull(this.getClass().getSimpleName(), "advisorName");
+    }
 
-	@Override
-	public int getOrder() {
-		return 0;
-	}
+    @Override
+    public int getOrder() {
+        return 0;
+    }
 
-	private ChatClientRequest before(ChatClientRequest request) {
-		log.info("AI Request: {}", request.prompt());
-		return request;
-	}
+    private @NonNull ChatClientRequest before(@NonNull ChatClientRequest request) {
+        log.info("AI Request: {}", request.prompt());
+        return request;
+    }
 
-	private void observeAfter(ChatClientResponse chatClientResponse) {
-		log.info("AI Response: {}", chatClientResponse.chatResponse().getResult().getOutput().getText());
-	}
+    private void observeAfter(@NonNull ChatClientResponse chatClientResponse) {
+        var response = chatClientResponse.chatResponse();
+        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+            log.info("AI Response: <empty>");
+            return;
+        }
+        log.info("AI Response: {}", response.getResult().getOutput().getText());
+    }
 
-	@Override
-	public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain chain) {
-		chatClientRequest = before(chatClientRequest);
-		ChatClientResponse chatClientResponse = chain.nextCall(chatClientRequest);
-		observeAfter(chatClientResponse);
-		return chatClientResponse;
-	}
+    @Override
+    public @NonNull ChatClientResponse adviseCall(@NonNull ChatClientRequest chatClientRequest, @NonNull CallAdvisorChain chain) {
+        ChatClientRequest safeRequest = before(chatClientRequest);
+        ChatClientResponse chatClientResponse = Objects.requireNonNull(chain.nextCall(safeRequest), "chatClientResponse");
+        observeAfter(chatClientResponse);
+        return chatClientResponse;
+    }
 
-	@Override
-	public Flux<ChatClientResponse> adviseStream(ChatClientRequest chatClientRequest, StreamAdvisorChain chain) {
-		chatClientRequest = before(chatClientRequest);
-		Flux<ChatClientResponse> chatClientResponseFlux = chain.nextStream(chatClientRequest);
-		return (new ChatClientMessageAggregator()).aggregateChatClientResponse(chatClientResponseFlux, this::observeAfter);
-	}
+    @Override
+    public @NonNull Flux<ChatClientResponse> adviseStream(@NonNull ChatClientRequest chatClientRequest, @NonNull StreamAdvisorChain chain) {
+        ChatClientRequest safeRequest = before(chatClientRequest);
+        Flux<ChatClientResponse> chatClientResponseFlux = Objects.requireNonNull(chain.nextStream(safeRequest), "chatClientResponseFlux");
+        return new ChatClientMessageAggregator().aggregateChatClientResponse(chatClientResponseFlux, this::observeAfter);
+    }
 }
 

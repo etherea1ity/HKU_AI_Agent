@@ -3,34 +3,34 @@
     <div class="footer-content">
       <div class="footer-section">
         <div class="footer-logo">
-          <h3>鱼皮AI超级智能体应用平台</h3>
+          <h3>HKU Campus Assistant</h3>
         </div>
         <div class="footer-links">
-          <a href="#">《用户协议》</a>
-          <a href="#">《隐私政策》</a>
-        </div>
-      </div>
-      
-      <div class="footer-section">
-        <h4>友情链接</h4>
-        <div class="footer-links">
-          <a href="https://www.mianshiya.com" target="_blank">面试鸭</a>
-          <a href="#" target="_blank">编程导航</a>
-          <a href="#" target="_blank">代码小抄</a>
+          <a href="#">User Agreement</a>
+          <a href="#">Privacy Policy</a>
         </div>
       </div>
-      
+
       <div class="footer-section">
-        <h4>联系我们</h4>
+        <h4>Campus Resources</h4>
         <div class="footer-links">
-          <a href="#">商务合作</a>
-          <a href="#">站长：鱼皮</a>
+          <a href="https://www.hku.hk" target="_blank">HKU Official Site</a>
+          <a href="https://www.hku.hk/calendar" target="_blank">Academic Calendar</a>
+          <a href="https://www.hku.hk/regulations" target="_blank">University Regulations</a>
+        </div>
+      </div>
+
+      <div class="footer-section">
+        <h4>Contact</h4>
+        <div class="footer-links">
+          <a href="mailto:contact@hku.hk">University Email</a>
+          <a href="https://www.hku.hk/contact" target="_blank">Contact Directory</a>
         </div>
       </div>
     </div>
-    
+
     <div class="footer-bottom">
-      <p>© {{ currentYear }} 鱼皮AI超级智能体应用平台 - 让AI为你服务</p>
+      <p>© {{ currentYear }} HKU Campus Assistant · Empowering campus life</p>
     </div>
   </footer>
 </template>
@@ -96,31 +96,6 @@ const currentYear = computed(() => new Date().getFullYear())
 
 .footer-links a:hover {
   color: #007bff;
-}
-
-.qrcode {
-  display: flex;
-  align-items: center;
-}
-
-.qrcode-container {
-  text-align: center;
-}
-
-.qrcode-placeholder {
-  width: 90px;
-  height: 90px;
-  background-color: #f5f5f5;
-  margin: 0 auto 10px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-}
-
-.qrcode-placeholder:after {
-  content: '🤖';
 }
 
 .footer-bottom {

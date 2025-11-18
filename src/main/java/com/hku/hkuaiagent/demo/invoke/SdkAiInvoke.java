@@ -1,4 +1,5 @@
-package com.hku.hkuaiagent.demo.invoke;// 建议dashscope SDK的版本 >= 2.12.0
+package com.hku.hkuaiagent.demo.invoke;
+
 import java.util.Arrays;
 import java.lang.System;
 import com.alibaba.dashscope.aigc.generation.Generation;
@@ -12,7 +13,8 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.utils.JsonUtils;
 
 /**
- * 阿里云灵积 AI SDK 调用
+ * Demonstrates calling DashScope directly via the Alibaba Cloud SDK.
+ * Use DashScope SDK version 2.12.0 or later for this example.
  */
 
 public class SdkAiInvoke {
@@ -24,12 +26,12 @@ public class SdkAiInvoke {
                 .build();
         Message userMsg = Message.builder()
                 .role(Role.USER.getValue())
-                .content("你是谁啊")
+                .content("Who are you?")
                 .build();
         GenerationParam param = GenerationParam.builder()
-                // 若没有配置环境变量，请用百炼API Key将下行替换为：.apiKey("sk-xxx")
+                // If the environment variable is missing, replace this with .apiKey("sk-xxx").
                 .apiKey(System.getenv(TestApiKey.API_KEY))
-                // 此处以qwen-plus为例，可按需更换模型名称。模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
+                // Example uses qwen-plus; see the DashScope docs for the full model list.
                 .model("qwen-plus")
                 .messages(Arrays.asList(systemMsg, userMsg))
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
@@ -41,7 +43,7 @@ public class SdkAiInvoke {
             GenerationResult result = callWithMessage();
             System.out.println(JsonUtils.toJson(result));
         } catch (ApiException | NoApiKeyException | InputRequiredException e) {
-            // 使用日志框架记录异常信息
+            // Log the exception so the demo remains simple for quick testing
             System.err.println("An error occurred while calling the generation service: " + e.getMessage());
         }
         System.exit(0);

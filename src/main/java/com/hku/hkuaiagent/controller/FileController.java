@@ -17,7 +17,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 文件操作控制器
+ * REST controller exposing simple file download and listing endpoints.
  */
 @RestController
 @RequestMapping("/file")
@@ -25,11 +25,11 @@ import java.nio.charset.StandardCharsets;
 public class FileController {
 
     /**
-     * 文件下载接口
+     * Download an exported file saved by the agent.
      *
-     * @param fileName 文件名
-     * @param type     文件类型（pdf, txt, html等）
-     * @return 文件流
+     * @param fileName Target filename
+     * @param type     Subdirectory/type (pdf, txt, html, etc.)
+     * @return File contents as a streamed response
      */
     @GetMapping("/download")
     public ResponseEntity<Resource> downloadFile(
@@ -37,36 +37,36 @@ public class FileController {
             @RequestParam(required = false, defaultValue = "pdf") String type) {
         
         try {
-            // 构建文件路径
+            // Build the on-disk path
             String fileDir = FileConstant.FILE_SAVE_DIR + "/" + type;
             String filePath = fileDir + "/" + fileName;
             File file = new File(filePath);
             
-            // 检查文件是否存在
+            // Validate file presence
             if (!file.exists() || !file.isFile()) {
-                log.error("文件不存在: {}", filePath);
+                log.error("File not found: {}", filePath);
                 return ResponseEntity.notFound().build();
             }
             
-            // 检查文件是否在允许的目录下（安全检查）
+            // Ensure the resolved path stays within the allowed directory (basic security check)
             String canonicalPath = file.getCanonicalPath();
             String canonicalBaseDir = new File(fileDir).getCanonicalPath();
             if (!canonicalPath.startsWith(canonicalBaseDir)) {
-                log.error("非法文件路径访问: {}", filePath);
+                log.error("Illegal file path access attempt: {}", filePath);
                 return ResponseEntity.badRequest().build();
             }
             
-            // 创建资源
+            // Create a resource handle
             Resource resource = new FileSystemResource(file);
             
-            // 确定Content-Type
+            // Determine the Content-Type header
             MediaType mediaType = getMediaType(type);
             
-            // 对文件名进行URL编码（支持中文文件名）
+            // URL-encode filenames so browsers handle special characters correctly
             String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
                     .replace("+", "%20");
             
-            // 返回文件
+            // Return the download response
             return ResponseEntity.ok()
                     .contentType(mediaType)
                     .header(HttpHeaders.CONTENT_DISPOSITION, 
@@ -74,13 +74,13 @@ public class FileController {
                     .body(resource);
             
         } catch (Exception e) {
-            log.error("文件下载失败: {}", fileName, e);
+            log.error("Failed to download file: {}", fileName, e);
             return ResponseEntity.internalServerError().build();
         }
     }
     
     /**
-     * 根据文件类型获取MediaType
+     * Resolve the appropriate MediaType for a given file extension.
      */
     private MediaType getMediaType(String type) {
         return switch (type.toLowerCase()) {
@@ -97,10 +97,10 @@ public class FileController {
     }
     
     /**
-     * 列出指定类型的所有文件
+     * List files for the provided type subdirectory.
      *
-     * @param type 文件类型
-     * @return 文件列表
+     * @param type Subdirectory/type filter
+     * @return Array of filenames
      */
     @GetMapping("/list")
     public ResponseEntity<String[]> listFiles(@RequestParam(required = false, defaultValue = "pdf") String type) {
@@ -116,7 +116,7 @@ public class FileController {
             return ResponseEntity.ok(files != null ? files : new String[0]);
             
         } catch (Exception e) {
-            log.error("列出文件失败", e);
+            log.error("Failed to list files", e);
             return ResponseEntity.internalServerError().build();
         }
     }

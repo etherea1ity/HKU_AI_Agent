@@ -9,7 +9,7 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import java.io.File;
 
 /**
- * 资源下载工具
+ * Helper tool for downloading remote resources to the local workspace.
  */
 public class ResourceDownloadTool {
 
@@ -18,9 +18,9 @@ public class ResourceDownloadTool {
         String fileDir = FileConstant.FILE_SAVE_DIR + "/download";
         String filePath = fileDir + "/" + fileName;
         try {
-            // 创建目录
+            // Ensure the target directory exists
             FileUtil.mkdir(fileDir);
-            // 使用 Hutool 的 downloadFile 方法下载资源
+            // Use Hutool's download utility to fetch the resource
             HttpUtil.downloadFile(url, new File(filePath));
             return "Resource downloaded successfully to: " + filePath;
         } catch (Exception e) {

@@ -18,6 +18,7 @@ C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke\LangChainAiInvoke.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke\OllamaAiInvoke.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke\SdkAiInvoke.java
+C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke\SpringAiAiInvoke.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke\SpringAiInvoke.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\invoke\TestApiKey.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\demo\rag\MultiQueryExpanderDemo.java
@@ -32,6 +33,7 @@ C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\rag\MyToken
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\rag\QueryRewriter.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\tools\CampusKnowledgeSearchTool.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\tools\FileOperationTool.java
+C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\tools\FilteredToolCallbackProvider.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\tools\PDFGenerationTool.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\tools\ResourceDownloadTool.java
 C:\Users\jsj31\Desktop\HKU_AI_Agent\src\main\java\com\hku\hkuaiagent\tools\TerminalOperationTool.java

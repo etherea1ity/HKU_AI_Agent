@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 自定义基于 Token 的切词器（适配HKU课程结构化文档）
+ * Token-based splitter tailored for HKU course documents.
  */
 @Component
 class MyTokenTextSplitter {
@@ -17,13 +17,13 @@ class MyTokenTextSplitter {
     }
 
     public List<Document> splitCustomized(List<Document> documents) {
-        // 优化：调整切分参数，适配HKU课程文档（结构化、关键信息集中）
+        // Custom configuration tuned for structured HKU course notes
         TokenTextSplitter splitter = new TokenTextSplitter(
-                300,    // chunkSize：每块300Token（课程文档单模块内容适中，无需过细）
-                50,     // chunkOverlap：重叠50Token（减少关键信息拆分，如表格、列表）
-                10,     // chunkNum：最大切分块数（默认即可）
-                5000,   // maxTokensPerDocument：单文档最大Token数（默认即可）
-                true    // keepSeparator：保留分隔符（如标题符号、表格分隔符，保持结构）
+            300,    // chunkSize: 300 tokens per chunk keeps modules intact
+            50,     // chunkOverlap: 50-token overlap to preserve tabular context
+            10,     // chunkNum: cap on chunk count (default)
+            5000,   // maxTokensPerDocument: leave at default maximum
+            true    // keepSeparator: retain headers and separators for structure
         );
         return splitter.apply(documents);
     }

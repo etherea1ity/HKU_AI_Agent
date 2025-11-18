@@ -9,12 +9,12 @@ import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 
 /**
- * HKU 校园助手 RAG 检索增强顾问工厂（兼容低版本 spring-ai）。
+ * Factory for HKU retrieval advisors, compatible with older spring-ai releases.
  */
 public class HkuAiRagCustomAdvisorFactory {
 
     /**
-     * 支持按 category + semester 过滤（任一可为 null）。
+     * Build an advisor that filters by category and/or semester (either argument may be null).
      */
     public static Advisor createHkuAiRagCustomAdvisor(VectorStore vectorStore,
                                                       String category,
@@ -48,7 +48,7 @@ public class HkuAiRagCustomAdvisorFactory {
     }
 
     /**
-     * 支持自定义 topK。
+     * Build an advisor with custom topK retrieval limits.
      */
     public static Advisor createHkuAiRagCustomAdvisor(VectorStore vectorStore,
                                                       String category,

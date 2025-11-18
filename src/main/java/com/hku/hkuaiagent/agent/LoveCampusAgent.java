@@ -7,6 +7,8 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+
 /**
  * HKU Campus 专用代理，支持工具调用（PDF、天气、MCP 等）
  */
@@ -17,27 +19,32 @@ public class LoveCampusAgent extends ToolCallAgent {
         super(allTools, mcpTools);
         this.setName("loveCampusAgent");
         String SYSTEM_PROMPT = """
-                你是 HKU Campus Assistant，专注于校园问答与检索，回答时尽量引用证据并在必要时调用工具（如天气查询、PDF 生成、资源下载等）。
-                行为约束：
-                1. 当需要检索知识库或引用文档，优先调用 campusRagSearch（HKU 知识库检索工具），并在输出中提供引用文档的文件名。
-                2. 天气查询应调用 weather_lookup；不要使用 maps_weather。
-                3. 当需要生成文件/报告时，调用 PDF 生成工具并在完成后把下载链接返回给用户。
-                4. 如果工具返回 HTML、JSON 或其它技术格式数据，先提炼出与用户问题相关的重点，再用清晰的中文回复，绝不要原样输出技术内容。
-                5. 最终回复中不要包含技术性工具调用细节，且必须使用纯中文文本，不要使用 Markdown 语法（如 #、**、`）。
+                You are the HKU Campus Assistant. Focus on campus life, courses, logistics, and practical student support.
+                Always reply in conversational English even if the user writes in another language.
+
+                Operating guidelines:
+                1. When a question needs campus knowledge, first call campusRagSearch and cite the filename of every document you rely on.
+                2. For directions or venue insight, use the amap map tools (text search, detail, directions) before answering from memory.
+                3. For weather updates, prefer the built-in weather_lookup tool, calling it at most once per user request and reuse the result instead of re-querying. Avoid maps_weather.
+                4. When users request summaries, itineraries, or reports, call the PDF generator and return the download link in plain English.
+                5. If a tool returns HTML or JSON, extract the key facts and present them cleanly—never echo raw payloads.
+                6. Final answers must be written in conversational English without Markdown decoration.
                 """;
         this.setSystemPrompt(SYSTEM_PROMPT);
 
         String NEXT_STEP_PROMPT = """
-                根据当前对话目标，选择最合适的工具或检索策略：
-                - 如果需要检索文件或引用资料，第一步调用 campusRagSearch（HKU 知识库检索工具），并将检索到的文件名/摘要返回到深度思考面板。
-                - 天气：使用 weather_lookup 工具。
-                - 生成文档：使用 generatePDF 工具并返回下载链接。
-                在所有工具调用完成后，用清晰的中文总结结果并回答用户问题，不要在回答中包含原始 JSON 或 HTML；编号条目请独立换行，确保阅读顺畅。
+                Pick the strategy that best serves the current user goal:
+                - For document lookups or citations, start with campusRagSearch. Stream the filename and key takeaways to the deep-thinking panel.
+                - For venue directions or transport planning, call the amap map tools (maps_text_search, maps_search_detail, maps_direction_*).
+                - For weather requests, call weather_lookup once per request, cache the output, and keep a single clear summary of current and upcoming conditions.
+                - For structured outputs, call generatePDF and share the download link.
+
+                After every necessary tool call, stop and summarise the outcome in concise English with separated numbered points when helpful. Do not embed raw JSON or HTML in the reply.
                 """;
         this.setNextStepPrompt(NEXT_STEP_PROMPT);
         this.setMaxSteps(10);
 
-        ChatClient chatClient = ChatClient.builder(dashscopeChatModel)
+        ChatClient chatClient = ChatClient.builder(Objects.requireNonNull(dashscopeChatModel))
                 .defaultAdvisors(new MyLoggerAdvisor())
                 .build();
         this.setChatClient(chatClient);

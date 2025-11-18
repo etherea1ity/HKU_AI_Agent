@@ -2,35 +2,60 @@
   <div class="home-container">
     <div class="header">
       <div class="glitch-wrapper">
-  <h1 class="glitch-title">HKU AI Agent</h1>
+        <h1 class="glitch-title">HKU Campus Assistant</h1>
       </div>
-  <p class="subtitle">An AI hub for HKU students and staff.</p>
+      <p class="subtitle">/ HKU Campus Intelligence Hub /</p>
       <div class="cyber-line"></div>
     </div>
     
+    <!-- Info widgets -->
+    <div class="info-display">
+      <div class="info-card">
+        <div class="info-icon">🕒</div>
+        <div class="info-content">
+          <div class="info-title">Current Time</div>
+          <div class="info-value">{{ currentTime }}</div>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">🌤️</div>
+        <div class="info-content">
+          <div class="info-title">Hong Kong Weather</div>
+          <div class="info-value">{{ weatherDisplay }}</div>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">🏫</div>
+        <div class="info-content">
+          <div class="info-title">Campus Services</div>
+          <div class="info-value">Fully operational</div>
+        </div>
+      </div>
+    </div>
+
     <div class="apps-container">
-      <div class="app-card" @click="navigateTo('/love-master')">
+      <div class="app-card" @click="navigateTo('/hku-assistant')">
         <div class="card-glow"></div>
-        <div class="app-icon love-icon">❤️</div>
+        <div class="app-icon assistant-icon">🎓</div>
         <div class="app-info">
-          <div class="app-title">HKU AI Agent</div>
-          <div class="app-desc">Campus companion for HKU courses, policies, and student life guidance.</div>
+          <div class="app-title">HKU Assistant</div>
+          <div class="app-desc">Your campus guide for courses, policies, and academic schedules.</div>
         </div>
         <div class="app-button">
-          <span class="btn-text">Start Chat</span>
+          <span class="btn-text">Open Assistant</span>
           <span class="btn-icon">→</span>
         </div>
       </div>
       
-      <div class="app-card" @click="navigateTo('/super-agent')">
+      <div class="app-card" @click="navigateTo('/info-retrieval')">
         <div class="card-glow"></div>
-        <div class="app-icon robot-icon">🤖</div>
+        <div class="app-icon search-icon">🔍</div>
         <div class="app-info">
-          <div class="app-title">AI Super Agent</div>
-          <div class="app-desc">Versatile AI co-pilot ready to analyze complex tasks and offer actionable advice.</div>
+          <div class="app-title">Super AI Agent</div>
+          <div class="app-desc">Always-on HKU intelligence with web search, geolocation, PDF creation, and more to solve everyday needs.</div>
         </div>
         <div class="app-button">
-          <span class="btn-text">Start Chat</span>
+          <span class="btn-text">Start Search</span>
           <span class="btn-icon">→</span>
         </div>
       </div>
@@ -41,33 +66,137 @@
       <div class="circle circle-2"></div>
       <div class="circle circle-3"></div>
     </div>
+
+    <AppFooter />
   </div>
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
+import AppFooter from '../components/AppFooter.vue'
 
-// 设置页面标题和元数据
+// Configure page metadata
 useHead({
-  title: 'HKU AI Agent Platform - Home',
+  title: 'HKU Campus Assistant - Home',
   meta: [
     {
       name: 'description',
-      content: 'HKU AI Agent Platform offers HKU-focused chat assistants including the HKU AI Agent and AI Super Agent experiences.'
+      content: 'HKU Campus Assistant helps you explore course details, academic schedules, and campus resources.'
     },
     {
       name: 'keywords',
-      content: 'HKU AI agent, campus assistant, AI super agent, HKU chatbot, student support, AI platform'
+      content: 'HKU, campus assistant, course information, academic calendar, campus services, super ai agent'
     }
   ]
 })
 
 const router = useRouter()
+const currentTime = ref('')
+const weatherDisplay = ref('Loading...')
 
 const navigateTo = (path) => {
   router.push(path)
 }
+
+// Update the live clock every second
+const updateTime = () => {
+  const now = new Date()
+  currentTime.value = now.toLocaleString('en-GB', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
+
+let timeInterval
+let weatherAbortController
+
+const describeWeather = (code) => {
+  const mapping = {
+    0: 'Clear sky',
+    1: 'Mainly clear',
+    2: 'Partly cloudy',
+    3: 'Overcast',
+    45: 'Foggy',
+    48: 'Depositing rime fog',
+    51: 'Light drizzle',
+    53: 'Moderate drizzle',
+    55: 'Dense drizzle',
+    56: 'Light freezing drizzle',
+    57: 'Dense freezing drizzle',
+    61: 'Light rain',
+    63: 'Moderate rain',
+    65: 'Heavy rain',
+    66: 'Light freezing rain',
+    67: 'Heavy freezing rain',
+    71: 'Slight snow fall',
+    73: 'Moderate snow fall',
+    75: 'Heavy snow fall',
+    77: 'Snow grains',
+    80: 'Slight rain showers',
+    81: 'Moderate rain showers',
+    82: 'Violent rain showers',
+    85: 'Slight snow showers',
+    86: 'Heavy snow showers',
+    95: 'Thunderstorm',
+    96: 'Thunderstorm with hail',
+    99: 'Thunderstorm with heavy hail'
+  }
+  return mapping[code] ?? 'Weather data'
+}
+
+const fetchWeather = async () => {
+  weatherAbortController?.abort()
+  weatherAbortController = new AbortController()
+
+  try {
+    const response = await fetch(
+      'https://api.open-meteo.com/v1/forecast?latitude=22.3193&longitude=114.1694&current_weather=true&timezone=Asia%2FHong_Kong',
+      {
+        signal: weatherAbortController.signal
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Weather request failed: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const current = data?.current_weather
+
+    if (current && typeof current.temperature === 'number') {
+      const temp = current.temperature.toFixed(1)
+      const description = describeWeather(current.weathercode)
+      weatherDisplay.value = `${temp}°C · ${description}`
+    } else {
+      weatherDisplay.value = 'Unavailable'
+    }
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      return
+    }
+    weatherDisplay.value = 'Unavailable'
+  }
+}
+
+onMounted(() => {
+  updateTime()
+  timeInterval = setInterval(updateTime, 1000)
+  fetchWeather()
+})
+
+onUnmounted(() => {
+  if (timeInterval) {
+    clearInterval(timeInterval)
+  }
+  weatherAbortController?.abort()
+})
 </script>
 
 <style scoped>
@@ -87,7 +216,6 @@ const navigateTo = (path) => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding-bottom: 80px;
   background-color: var(--cyber-dark);
   background-image: 
     linear-gradient(0deg, rgba(8, 17, 34, 0.9), rgba(5, 8, 20, 0.9)),
@@ -128,25 +256,7 @@ const navigateTo = (path) => {
 
 .glitch-title::before,
 .glitch-title::after {
-  content: 'HKU AI Agent';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.8;
-}
-
-.glitch-title::before {
-  color: var(--neon-pink);
-  z-index: -1;
-  animation: glitch-anim 2s infinite;
-}
-
-.glitch-title::after {
-  color: var(--neon-blue);
-  z-index: -2;
-  animation: glitch-anim-2 3s infinite;
+  content: none;
 }
 
 .subtitle {
@@ -189,30 +299,80 @@ const navigateTo = (path) => {
   right: 20%;
 }
 
+/* 信息展示区域样式 */
+.info-display {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.info-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-icon {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-title {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 5px;
+}
+
+.info-value {
+  font-size: 1.1rem;
+  color: white;
+  font-weight: 500;
+}
+
 .apps-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 32px;
-  max-width: 960px;
-  margin: 48px auto 0;
-  padding: 0 20px 60px;
+  gap: 50px;
+  max-width: 1200px;
+  margin: 60px auto;
+  padding: 0 20px;
   flex: 1;
   position: relative;
   z-index: 2;
 }
 
 .app-card {
-  width: 280px;
-  background-color: rgba(17, 23, 41, 0.72);
+  width: 340px;
+  background-color: rgba(17, 23, 41, 0.7);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  box-shadow: 
-    0 6px 24px rgba(0, 240, 255, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  padding: 24px;
+  box-shadow:
+    0 8px 32px rgba(0, 240, 255, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  padding: 30px;
   cursor: pointer;
-  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -228,7 +388,7 @@ const navigateTo = (path) => {
   height: 200%;
   background: radial-gradient(
     circle at center,
-    rgba(var(--neon-blue-rgb), 0.1) 0%,
+    rgba(0, 240, 255, 0.1) 0%,
     transparent 70%
   );
   opacity: 0;
@@ -238,7 +398,7 @@ const navigateTo = (path) => {
 
 .app-card:hover {
   transform: translateY(-15px) scale(1.03);
-  box-shadow: 
+  box-shadow:
     0 15px 50px rgba(0, 240, 255, 0.3),
     inset 0 0 0 1px rgba(0, 240, 255, 0.5);
 }
@@ -248,10 +408,10 @@ const navigateTo = (path) => {
 }
 
 .app-icon {
-  font-size: 3.4rem;
-  margin-bottom: 22px;
-  width: 80px;
-  height: 80px;
+  font-size: 4rem;
+  margin-bottom: 25px;
+  width: 90px;
+  height: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -260,44 +420,42 @@ const navigateTo = (path) => {
   z-index: 1;
 }
 
-.love-icon {
-  background: linear-gradient(135deg, #ff007a, #ff5722);
-  box-shadow: 0 0 20px rgba(255, 0, 122, 0.5);
+.assistant-icon {
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
 }
 
-.robot-icon {
-  background: linear-gradient(135deg, #00b2ff, #4f56ff);
-  box-shadow: 0 0 20px rgba(0, 178, 255, 0.5);
+.search-icon {
+  background: linear-gradient(135deg, #2196F3, #03A9F4);
+  box-shadow: 0 0 20px rgba(33, 150, 243, 0.5);
 }
-
 
 .app-info {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
   width: 100%;
 }
 
 .app-title {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.4rem;
-  font-weight: 600;
+  font-size: 1.6rem;
+  font-weight: bold;
   color: white;
-  margin-bottom: 10px;
-  text-shadow: 0 0 8px rgba(0, 240, 255, 0.45);
+  margin-bottom: 12px;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
 }
 
 .app-desc {
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.72);
-  line-height: 1.5;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
 }
-
 
 .app-button {
   background: linear-gradient(90deg, #0088ff, #00b2ff);
   color: white;
-  padding: 10px 22px;
-  border-radius: 28px;
+  padding: 12px 28px;
+  border-radius: 30px;
   font-weight: 500;
   transition: all 0.3s;
   margin-top: auto;
@@ -305,7 +463,7 @@ const navigateTo = (path) => {
   align-items: center;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(0, 240, 255, 0.24);
+  border: 1px solid rgba(0, 240, 255, 0.3);
 }
 
 .app-button::before {
@@ -459,6 +617,16 @@ const navigateTo = (path) => {
   
   .subtitle {
     font-size: 1rem;
+  }
+
+  .info-display {
+    flex-direction: column;
+    gap: 15px;
+    margin: 30px auto;
+  }
+
+  .info-card {
+    min-width: auto;
   }
   
   .apps-container {

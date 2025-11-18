@@ -8,9 +8,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 /**
- * Spring AI 框架调用 AI 大模型（Ollama）
+ * Demonstrates calling an Ollama chat model using Spring AI.
  */
-// 取消注释后，项目启动时会执行
+// Uncomment the annotation below to execute this demo during application startup.
 //@Component
 public class OllamaAiInvoke implements CommandLineRunner {
 
@@ -19,7 +19,7 @@ public class OllamaAiInvoke implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        AssistantMessage assistantMessage = ollamaChatModel.call(new Prompt("你好，你是什么模型？max还是flash还是什么？一句话回答"))
+        AssistantMessage assistantMessage = ollamaChatModel.call(new Prompt("State which Ollama model you are in a single sentence."))
                 .getResult()
                 .getOutput();
         System.out.println(assistantMessage.getText());

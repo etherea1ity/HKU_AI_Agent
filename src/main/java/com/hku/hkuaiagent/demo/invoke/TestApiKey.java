@@ -1,11 +1,11 @@
 package com.hku.hkuaiagent.demo.invoke;
 
 /**
- * 仅用于测试获取 API Key
+ * Demo helper used for supplying an API key during local testing.
  */
 public interface TestApiKey {
 
-    // 修改为你的 API Key
+    // Replace with your own API key when running the demos.
     String API_KEY = "DASHSCOPE_API_KEY";
 }
 

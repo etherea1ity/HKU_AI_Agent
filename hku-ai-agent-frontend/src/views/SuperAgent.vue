@@ -2,7 +2,7 @@
   <div class="chat-layout">
     <aside class="sidebar" :class="{ open: isSidebarOpen }">
       <div class="sidebar-header">
-        <span class="sidebar-title">AI超级智能体</span>
+        <span class="sidebar-title">AI Super Agent</span>
         <button class="sidebar-close" @click="closeSidebar" aria-label="Close sidebar">×</button>
       </div>
       <button class="sidebar-new-chat" @click="createNewConversation">+ New Chat</button>
@@ -34,9 +34,9 @@
       <div class="header">
         <div class="header-left">
           <button class="menu-button" @click="toggleSidebar" aria-label="Toggle sidebar">☰</button>
-          <button class="back-button" @click="goBack">返回</button>
+          <button class="back-button" @click="goBack">Back</button>
         </div>
-        <h1 class="title">AI超级智能体</h1>
+        <h1 class="title">AI Super Agent</h1>
         <div class="chat-meta">
           <span class="chat-label">Session</span>
           <span class="chat-value">{{ chatId }}</span>
@@ -79,22 +79,22 @@ import DeepThinkingPanel from '../components/DeepThinkingPanel.vue'
 import { chatWithManus } from '../api'
 
 useHead({
-  title: 'AI超级智能体 - HKU AI Agent 平台',
+  title: 'AI Super Agent - HKU AI Agent Platform',
   meta: [
     {
       name: 'description',
-      content: 'AI超级智能体是 HKU AI Agent 平台的全能助手，能解答各类专业问题，提供精准建议和解决方案'
+      content: 'AI Super Agent is the all-purpose assistant of the HKU AI Agent platform, ready to answer complex questions and offer actionable recommendations.'
     },
     {
       name: 'keywords',
-      content: 'AI超级智能体,智能助手,专业问答,AI问答,专业建议,HKU,AI智能体'
+      content: 'AI Super Agent, intelligent assistant, professional Q&A, AI chat, actionable insights, HKU'
     }
   ]
 })
 
 const DESKTOP_BREAKPOINT = 1024
 const STORAGE_KEY = 'hku_super_chat_history'
-const WELCOME_MESSAGE = '你好，我是 AI 超级智能体。\n\n我可以协助分析复杂问题、整合多源信息并给出执行建议。\n\n告诉我你的目标或遇到的挑战，我们一起拆解并规划下一步。'
+const WELCOME_MESSAGE = 'Hello, I am the AI Super Agent.\n\nI can help you analyze complex problems, connect multiple data points, and outline practical next steps.\n\nShare your goal or challenge and we will break it down together.'
 
 const SSE_TAGS = {
   THINKING_START: '[THINKING_START]',
@@ -127,7 +127,7 @@ const createEmptyDeepThinkingState = () => ({
   collapsed: false
 })
 
-// 默认显示深度思考面板（可折叠），但用户可收起
+// Default to showing the deep thinking panel (collapsible) so users can hide it when needed
 const deepPanelAlwaysVisible = ref(true)
 const deepPanelVisible = computed(() => {
   return (
@@ -182,7 +182,7 @@ const parseRagSources = (raw) => {
 
     return list
       .map((item) => ({
-        title: String(item?.title || '相关资料'),
+        title: String(item?.title || 'Reference material'),
         snippet: String(item?.snippet || '').trim(),
         source: item?.source ? String(item.source) : ''
       }))
@@ -249,7 +249,7 @@ const syncActiveConversation = ({ userMessage } = {}) => {
   if (userMessage) {
     const trimmed = userMessage.trim()
     if (trimmed && (!conversation.title || conversation.title === 'New chat')) {
-      conversation.title = trimmed.length > 36 ? `${trimmed.slice(0, 36)}…` : trimmed
+      conversation.title = trimmed.length > 36 ? `${trimmed.slice(0, 36)}...` : trimmed
     }
   }
 
@@ -285,7 +285,7 @@ const formatTimestamp = (timestamp) => {
   if (!timestamp) {
     return ''
   }
-  return new Date(timestamp).toLocaleString('zh-HK', {
+  return new Date(timestamp).toLocaleString('en-HK', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -411,8 +411,8 @@ const sendMessage = (message) => {
       thinkingSteps.value = []
       ragSources.value = []
       const payload = data.slice(SSE_TAGS.THINKING_START.length).trim()
-      thinkingHeader.value = payload || 'AI 深度思考中…'
-      thinkingSubtitle.value = 'HKU Manus 正在分析任务'
+      thinkingHeader.value = payload || 'AI Super Agent is thinking...'
+      thinkingSubtitle.value = 'HKU Manus is analyzing the task'
       isPanelCollapsed.value = false
       connectionStatus.value = 'connected'
       syncActiveConversation()
@@ -422,7 +422,7 @@ const sendMessage = (message) => {
     if (data.startsWith(SSE_TAGS.THINKING_END)) {
       isThinking.value = false
       const payload = data.slice(SSE_TAGS.THINKING_END.length).trim()
-      thinkingSubtitle.value = payload || '思考完成'
+      thinkingSubtitle.value = payload || 'Analysis complete'
       syncActiveConversation()
       return
     }
@@ -449,7 +449,7 @@ const sendMessage = (message) => {
     if (aiMessageIndex < messages.value.length) {
       if (isThinking.value) {
         isThinking.value = false
-        thinkingSubtitle.value = '输出回复中…'
+        thinkingSubtitle.value = 'Preparing response...'
       }
 
       messages.value[aiMessageIndex].content += data

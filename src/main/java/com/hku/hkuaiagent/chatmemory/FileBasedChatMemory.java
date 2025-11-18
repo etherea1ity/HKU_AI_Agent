@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 基于文件持久化的对话记忆
+ * File-backed implementation of ChatMemory for simple persistence.
  */
 public class FileBasedChatMemory implements ChatMemory {
 
@@ -24,11 +24,11 @@ public class FileBasedChatMemory implements ChatMemory {
 
     static {
         kryo.setRegistrationRequired(false);
-        // 设置实例化策略
+        // Allow Kryo to instantiate classes without zero-argument constructors
         kryo.setInstantiatorStrategy(new StdInstantiatorStrategy());
     }
 
-    // 构造对象时，指定文件保存目录
+    // Store all conversation files relative to the provided directory
     public FileBasedChatMemory(String dir) {
         this.BASE_DIR = dir;
         File baseDir = new File(dir);

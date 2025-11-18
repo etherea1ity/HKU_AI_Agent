@@ -8,9 +8,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 /**
- * Spring AI 框架调用 AI 大模型（阿里）
+ * Demonstrates calling the DashScope chat model using Spring AI.
  */
-// 取消注释后，项目启动时会执行
+// Uncomment the annotation below to execute this demo during application startup.
 //@Component
 public class SpringAiAiInvoke implements CommandLineRunner {
 
@@ -19,7 +19,7 @@ public class SpringAiAiInvoke implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        AssistantMessage assistantMessage = dashscopeChatModel.call(new Prompt("你好，我是鱼皮"))
+        AssistantMessage assistantMessage = dashscopeChatModel.call(new Prompt("Hello from the HKU AI Agent demo."))
                 .getResult()
                 .getOutput();
         System.out.println(assistantMessage.getText());

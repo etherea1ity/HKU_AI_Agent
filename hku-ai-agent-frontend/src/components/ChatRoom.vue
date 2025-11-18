@@ -1,9 +1,9 @@
 ﻿<template>
   <div class="chat-container">
-    <!-- 聊天记录区域 -->
+    <!-- Conversation history -->
     <div class="chat-messages" ref="messagesContainer">
       <div v-for="(msg, index) in messages" :key="index" class="message-wrapper">
-        <!-- AI消息 -->
+        <!-- AI message -->
         <div
           v-if="!msg.isUser"
           class="message ai-message"
@@ -24,26 +24,26 @@
           </div>
         </div>
 
-        <!-- 用户消息 -->
+        <!-- User message -->
         <div v-else class="message user-message" :class="[msg.type]">
           <div class="message-bubble">
             <div class="message-content">{{ msg.content }}</div>
             <div class="message-time">{{ formatTime(msg.time) }}</div>
           </div>
           <div class="avatar user-avatar">
-            <div class="avatar-placeholder">我</div>
+            <div class="avatar-placeholder">Me</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 输入区域 -->
+    <!-- Input area -->
     <div class="chat-input-container">
       <div class="chat-input">
         <textarea
           v-model="inputMessage"
           @keydown.enter.prevent="sendMessage"
-          placeholder="请输入消息..."
+          placeholder="Type your message..."
           class="input-box"
           :disabled="connectionStatus === 'connecting'"
         ></textarea>
@@ -51,7 +51,7 @@
           @click="sendMessage"
           class="send-button"
           :disabled="connectionStatus === 'connecting' || !inputMessage.trim()"
-        >发送</button>
+        >Send</button>
       </div>
     </div>
   </div>
@@ -72,7 +72,7 @@ const props = defineProps({
   },
   aiType: {
     type: String,
-    default: 'default' // 'love' 或 'super'
+    default: 'default' // 'love' or 'super'
   }
 })
 
@@ -81,7 +81,7 @@ const emit = defineEmits(['send-message'])
 const inputMessage = ref('')
 const messagesContainer = ref(null)
 
-// 发送消息
+// Send a message
 const sendMessage = () => {
   if (!inputMessage.value.trim()) {
     return
@@ -91,13 +91,13 @@ const sendMessage = () => {
   inputMessage.value = ''
 }
 
-// 格式化时间
+// Format time for display
 const formatTime = (timestamp) => {
   const date = new Date(timestamp)
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleTimeString('en-HK', { hour: '2-digit', minute: '2-digit' })
 }
 
-// 格式化消息内容，提供基础的富文本支持并清理异常字符
+// Format message content, offering basic rich text support and sanitization
 const formatMessageContent = (content) => {
   if (!content) {
     return ''
@@ -126,14 +126,18 @@ const formatMessageContent = (content) => {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
 
-  escapedContent = escapedContent.replace(/\n/g, '<br>')
+  escapedContent = escapedContent.replace(/\r\n/g, '\n')
+  const paragraphBlocks = escapedContent.split(/\n{2,}/)
+  escapedContent = paragraphBlocks
+    .map((block) => block.split('\n').join('<br>'))
+    .join('<br><br>')
 
   downloadButtons.forEach((url, index) => {
     const placeholder = `__DOWNLOAD_BTN_${index}__`
     const safeUrl = url.replace(/&amp;/g, '&')
     escapedContent = escapedContent.replace(
       placeholder,
-      `<a href="${safeUrl}" target="_blank" class="download-btn" download>📥 点击下载PDF</a>`
+      `<a href="${safeUrl}" target="_blank" class="download-btn" download>📥 Download PDF</a>`
     )
   })
 

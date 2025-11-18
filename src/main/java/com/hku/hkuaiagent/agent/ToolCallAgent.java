@@ -20,29 +20,30 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * 处理工具调用的基础代理类，具体实现了 think 和 act 方法，可以用作创建实例的父类
+ * Base agent for orchestrating tool calls. Implements dedicated think/act steps and can be extended.
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Slf4j
 public class ToolCallAgent extends ReActAgent {
 
-    // 可用的工具 8个
+    // Registered tools exposed to the agent (local + MCP)
     private final ToolCallback[] availableTools;
 
-    // MCP工具
+    // Provider that exposes dynamically discovered MCP tools
     private final ToolCallbackProvider mcpToolProvider;
 
-    // 保存工具调用信息的响应结果（要调用那些工具）
+    // Last tool-call planning response returned by the model
     private ChatResponse toolCallChatResponse;
 
-    // 工具调用管理者
+    // Helper responsible for executing tool calls outside the model
     private final ToolCallingManager toolCallingManager;
 
-    // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
+    // Disable the built-in Spring AI tool execution so we can manage context manually
     private final ChatOptions chatOptions;
 
     public ToolCallAgent(ToolCallback[] availableTools, ToolCallbackProvider mcpToolProvider) {
@@ -50,7 +51,7 @@ public class ToolCallAgent extends ReActAgent {
         this.availableTools = availableTools;
         this.mcpToolProvider = mcpToolProvider;
         this.toolCallingManager = ToolCallingManager.builder().build();
-        // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
+        // Disable the built-in Spring AI tool execution so we can manage context manually
         this.chatOptions = DashScopeChatOptions.builder()
                 .withInternalToolExecutionEnabled(false)
                 .build();
@@ -58,137 +59,148 @@ public class ToolCallAgent extends ReActAgent {
 
 
     /**
-     * 处理当前状态并决定下一步行动
+     * Plan the next step and decide whether any tools must be executed.
      *
-     * @return 是否需要执行行动
+     * @return true if the agent should execute tool calls; false if it can produce a final answer
      */
     @Override
     public boolean think() {
-        // 1、校验提示词，拼接用户提示词
-        if (StrUtil.isNotBlank(getNextStepPrompt())) {
-            UserMessage userMessage = new UserMessage(getNextStepPrompt());
+        // Append the next-step prompt if one was prepared already
+        String nextStepPrompt = getNextStepPrompt();
+        if (StrUtil.isNotBlank(nextStepPrompt)) {
+            UserMessage userMessage = new UserMessage(Objects.requireNonNull(nextStepPrompt));
             getMessageList().add(userMessage);
         }
-        // 2、调用 AI 大模型，获取工具调用结果
+        // Ask the LLM to decide which tools to call, if any
         List<Message> messageList = getMessageList();
         Prompt prompt = new Prompt(messageList, this.chatOptions);
         try {
-            ChatResponse chatResponse = getChatClient().prompt(prompt)
-                    .system(getSystemPrompt())
-                    .toolCallbacks(availableTools)
+            var promptSpec = getChatClient().prompt(prompt);
+            String systemPrompt = getSystemPrompt();
+            if (StrUtil.isNotBlank(systemPrompt)) {
+                promptSpec = promptSpec.system(Objects.requireNonNull(systemPrompt));
+            }
+            ChatResponse chatResponse = promptSpec
+                    .toolCallbacks(Objects.requireNonNull(availableTools))
                     .toolCallbacks(mcpToolProvider)
                     //.tools(availableTools)
                     .call()
                     .chatResponse();
-            // 记录响应，用于等下 Act
+            if (chatResponse == null || chatResponse.getResult() == null) {
+                log.warn(getName() + " returned an empty response while planning; finishing without tool calls");
+                setState(AgentState.FINISHED);
+                return false;
+            }
+            // Cache the full response so act() can execute the plan
             this.toolCallChatResponse = chatResponse;
-            // 3、解析工具调用结果，获取要调用的工具
-            // 助手消息
+            // Extract the assistant message and parse tool-call directives
             AssistantMessage assistantMessage = chatResponse.getResult().getOutput();
-            // 获取要调用的工具列表
+            // Collect the tool-call directives that need to be executed
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
-            // 输出提示信息
+            // Log the reasoning so we can trace behaviour during debugging
             String result = assistantMessage.getText();
             if (StrUtil.isNotBlank(result)) {
-                log.info(getName() + "的思考：" + result);
+                log.info(getName() + " reasoning: " + result);
             }
-            log.info(getName() + "选择了 " + toolCallList.size() + " 个工具来使用");
+            log.info(getName() + " selected " + toolCallList.size() + " tool(s) to execute");
             
-            // 如果不需要调用工具，返回 false
+            // If no tool invocations are required, finish immediately
             if (toolCallList.isEmpty()) {
-                // 只有不调用工具时，才需要手动记录助手消息
+                // Persist the assistant message when no tools run so the conversation is complete
                 getMessageList().add(assistantMessage);
-                // 标记任务完成
+                // Mark the agent as finished because there is nothing else to execute
                 setState(AgentState.FINISHED);
                 return false;
             } else {
-                // 发送工具调用信息到前端（简洁版）
+                // Emit the compact tool-call summary for the frontend stream
                 if (!toolCallList.isEmpty()) {
                     String toolNames = toolCallList.stream()
-                            .map(toolCall -> getToolDisplayName(toolCall.name()))
-                            .collect(Collectors.joining("、"));
-                    sendSseMessage("[TOOL_CALL]第" + getCurrentStep() + "步：调用" + toolNames);
+                        .map(toolCall -> getToolDisplayName(toolCall.name()))
+                        .collect(Collectors.joining(", "));
+                    sendSseMessage("[TOOL_CALL]Step " + getCurrentStep() + ": using " + toolNames);
                     
-                    // 详细信息只输出到日志
+                    // Send the detailed payload only to logs to avoid noisy UI output
                     String toolCallInfo = toolCallList.stream()
-                            .map(toolCall -> String.format("工具名称：%s，参数：%s", toolCall.name(), toolCall.arguments()))
+                        .map(toolCall -> String.format("Tool: %s, arguments: %s", toolCall.name(), toolCall.arguments()))
                             .collect(Collectors.joining("\n"));
                     log.info(toolCallInfo);
                 }
-                // 需要调用工具时，无需记录助手消息，因为调用工具时会自动记录
+                // Do not duplicate assistant messages since tool execution will append its own context
                 return true;
             }
         } catch (Exception e) {
-            log.error(getName() + "的思考过程遇到了问题：" + e.getMessage());
-            getMessageList().add(new AssistantMessage("处理时遇到了错误：" + e.getMessage()));
+            log.error(getName() + " encountered an issue during planning: " + e.getMessage());
+            getMessageList().add(new AssistantMessage("An error occurred while planning: " + e.getMessage()));
             setState(AgentState.FINISHED);
             return false;
         }
     }
 
     /**
-     * 获取工具的友好显示名称
-     * 
-     * @param toolName 工具的内部名称
-     * @return 用户友好的显示名称
+     * Translate a tool's internal identifier into a user-facing label.
+     *
+     * @param toolName Internal tool identifier returned by the planner
+     * @return User-friendly label used in logs and UI messages
      */
     private String getToolDisplayName(String toolName) {
-        // 将工具名称映射为用户友好的中文名称
+        // Map tool identifiers to user-friendly English labels
         return switch (toolName) {
-            case "maps_text_search" -> "地图搜索工具";
-            case "maps_around_search" -> "周边搜索工具";
-            case "maps_geo" -> "地理编码工具";
-            case "maps_regeocode" -> "逆地理编码工具";
-            case "maps_weather" -> "天气查询工具";
-            case "maps_direction_driving" -> "驾车路线规划工具";
-            case "maps_direction_walking" -> "步行路线规划工具";
-            case "maps_direction_transit_integrated" -> "公交路线规划工具";
-            case "maps_bicycling" -> "骑行路线规划工具";
-            case "maps_distance" -> "距离测量工具";
-            case "maps_search_detail" -> "POI详情查询工具";
-            case "maps_ip_location" -> "IP定位工具";
-            case "doWebSearch" -> "网络搜索工具";
-            case "doWebScraping" -> "网页抓取工具";
-            case "downloadResource" -> "资源下载工具";
-            case "generatePDF" -> "PDF生成工具";
-            case "executeCommand" -> "命令执行工具";
-            case "fileOperation" -> "文件操作工具";
-            case "doTerminate" -> "终止工具";
-            default -> toolName; // 默认返回原名称
+            case "maps_text_search" -> "Map text search";
+            case "maps_around_search" -> "Nearby map search";
+            case "maps_geo" -> "Geocoding tool";
+            case "maps_regeocode" -> "Reverse geocoding";
+            case "maps_weather" -> "Map weather lookup";
+            case "maps_direction_driving" -> "Driving directions";
+            case "maps_direction_walking" -> "Walking directions";
+            case "maps_direction_transit_integrated" -> "Transit directions";
+            case "maps_bicycling" -> "Cycling directions";
+            case "maps_distance" -> "Distance measurement";
+            case "maps_search_detail" -> "POI detail lookup";
+            case "maps_ip_location" -> "IP geolocation";
+            case "doWebSearch" -> "Web search";
+            case "doWebScraping" -> "Web scraping";
+            case "downloadResource" -> "Resource download";
+            case "generatePDF" -> "PDF generator";
+            case "executeCommand" -> "Command executor";
+            case "fileOperation" -> "File operator";
+            case "doTerminate" -> "Terminate";
+            default -> toolName; // Fall back to the raw identifier
         };
     }
     
     /**
-     * 执行工具调用并处理结果
+     * Execute the selected tools and record their responses in the conversation.
      *
-     * @return 执行结果
+     * @return Aggregated tool output as a human-readable string
      */
     @Override
     public String act() {
-        if (!toolCallChatResponse.hasToolCalls()) {
-            return "没有工具需要调用";
+        if (toolCallChatResponse == null) {
+            log.warn(getName() + " act() invoked without a prior planning response; skipping tool execution");
+            return "No tool invocations required";
         }
-        // 调用工具
+        if (!toolCallChatResponse.hasToolCalls()) {
+            return "No tool invocations required";
+        }
+        // Execute the planned tool calls
         Prompt prompt = new Prompt(getMessageList(), this.chatOptions);
-        ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(prompt, toolCallChatResponse);
-        // 记录消息上下文，conversationHistory 已经包含了助手消息和工具调用返回的结果
+        ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(prompt, Objects.requireNonNull(toolCallChatResponse));
+        // Persist the updated conversation that now contains assistant + tool responses
         setMessageList(toolExecutionResult.conversationHistory());
         ToolResponseMessage toolResponseMessage = (ToolResponseMessage) CollUtil.getLast(toolExecutionResult.conversationHistory());
-        // 判断是否调用了终止工具
+        // Detect if the terminate tool was triggered to finish the workflow early
         boolean terminateToolCalled = toolResponseMessage.getResponses().stream()
                 .anyMatch(response -> response.name().equals("doTerminate"));
         if (terminateToolCalled) {
-            // 任务结束，更改状态
+            // Mark the agent as finished when the terminate tool is used
             setState(AgentState.FINISHED);
         }
         String results = toolResponseMessage.getResponses().stream()
-                .map(response -> "工具 " + response.name() + " 返回的结果：" + response.responseData())
+            .map(response -> "Tool " + response.name() + " returned: " + response.responseData())
                 .collect(Collectors.joining("\n"));
         log.info(results);
         
-        // 在工具调用完成后，添加一个提示，要求AI总结结果并回答用户问题
-        // 这样可以确保AI会在下一次think时生成最终的自然语言回复
-        // 注意：不要在这里添加提示，因为 NEXT_STEP_PROMPT 会在下一次 think 时自动添加
+        // Note: we rely on NEXT_STEP_PROMPT to ask the model for a natural-language answer on the next think() call
         
         return results;
     }

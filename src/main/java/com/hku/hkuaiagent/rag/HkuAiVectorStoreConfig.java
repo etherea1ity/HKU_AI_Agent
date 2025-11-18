@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 /**
- * HKU 校园助手向量数据库配置（基于内存的 SimpleVectorStore）。
+ * Vector store configuration for the HKU assistant using an in-memory SimpleVectorStore.
  */
 @Configuration
 @ConditionalOnProperty(name = "hku.ai.rag.enabled", havingValue = "true", matchIfMissing = false)

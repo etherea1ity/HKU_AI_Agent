@@ -9,12 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.concurrent.CompletableFuture;
@@ -65,6 +67,7 @@ public abstract class BaseAgent {
         if (this.state != AgentState.IDLE) {
             throw new RuntimeException("Cannot run agent from state: " + this.state);
         }
+        userPrompt = Objects.requireNonNull(userPrompt, "userPrompt");
         if (StrUtil.isBlank(userPrompt)) {
             throw new RuntimeException("Cannot run agent with empty user prompt");
         }
@@ -94,7 +97,7 @@ public abstract class BaseAgent {
         } catch (Exception e) {
             state = AgentState.ERROR;
             log.error("error executing agent", e);
-            return "执行错误" + e.getMessage();
+            return "Execution error: " + e.getMessage();
         } finally {
             // 3、清理资源
             this.cleanup();
@@ -110,17 +113,19 @@ public abstract class BaseAgent {
     public SseEmitter runStream(String userPrompt) {
         // 创建一个超时时间较长的 SseEmitter
         SseEmitter sseEmitter = new SseEmitter(300000L); // 5 分钟超时
+        final String safeUserPrompt = Objects.requireNonNull(userPrompt, "userPrompt");
         // 使用线程异步处理，避免阻塞主线程
         CompletableFuture.runAsync(() -> {
             // 1、基础校验
             try {
                 if (this.state != AgentState.IDLE) {
-                    sseEmitter.send("错误：无法从状态运行代理：" + this.state);
+                    sseEmitter.send("[ERROR] Cannot run agent from state: " + this.state);
                     sseEmitter.complete();
                     return;
                 }
-                if (StrUtil.isBlank(userPrompt)) {
-                    sseEmitter.send("错误：不能使用空提示词运行代理");
+                Objects.requireNonNull(safeUserPrompt, "userPrompt");
+                if (StrUtil.isBlank(safeUserPrompt)) {
+                    sseEmitter.send("[ERROR] Cannot run agent with an empty prompt");
                     sseEmitter.complete();
                     return;
                 }
@@ -132,12 +137,13 @@ public abstract class BaseAgent {
             // 设置当前的 SSE 发射器
             this.currentSseEmitter = sseEmitter;
             // 记录消息上下文
-            messageList.add(new UserMessage(userPrompt));
+            messageList.add(new UserMessage(safeUserPrompt));
+            // Replace usage with safe prompt
             // 保存结果列表
             List<String> results = new ArrayList<>();
             try {
                 // 发送开始思考的信号
-                sseEmitter.send("[THINKING_START]正在思考如何处理您的问题...");
+                sseEmitter.send("[THINKING_START]Analyzing your request...");
                 
                 // 执行循环
                 for (int i = 0; i < maxSteps && state != AgentState.FINISHED; i++) {
@@ -154,7 +160,7 @@ public abstract class BaseAgent {
                 }
                 
                 // 发送思考完成信号
-                sseEmitter.send("[THINKING_END]思考完成，正在整理答案...");
+                sseEmitter.send("[THINKING_END]Thought process complete, assembling the answer...");
                 
                 // 检查是否超出步骤限制
                 boolean reachedMaxSteps = currentStep >= maxSteps;
@@ -175,16 +181,19 @@ public abstract class BaseAgent {
                         // 直接发送工具返回的信息（特别是PDF生成的结果）
                         sendInChunks(sseEmitter, toolResponse);
                     } else if (reachedMaxSteps) {
-                        // 如果达到最大步骤且没有工具响应，生成一个总结
-                        String summary = formatPlainTextResponse(generateMaxStepsSummary());
-                        if (StrUtil.isNotBlank(summary)) {
-                            sendInChunks(sseEmitter, summary);
+                        // 如果达到最大步骤，使用已有信息再次请求模型生成最终答复
+                        String summary = generateMaxStepsSummary();
+                        String fallback = attemptFallbackCompletion(safeUserPrompt, summary);
+                        String candidate = StrUtil.isNotBlank(fallback) ? fallback : summary;
+                        String normalizedCandidate = formatPlainTextResponse(candidate);
+                        if (StrUtil.isNotBlank(normalizedCandidate)) {
+                            sendInChunks(sseEmitter, normalizedCandidate);
                         } else {
-                            sseEmitter.send("抱歉，我已经尝试了多个步骤来解决您的问题，但未能得出完整的结论。请尝试重新表述您的问题，或者提供更多具体信息。");
+                            sseEmitter.send("Sorry, I tried several approaches but could not reach a complete conclusion. Please rephrase the question or provide extra details.");
                         }
                     } else {
                         // 最后的兜底
-                        sseEmitter.send("任务已完成。");
+                        sseEmitter.send("Task completed.");
                     }
                 }
                 
@@ -196,7 +205,7 @@ public abstract class BaseAgent {
                 state = AgentState.ERROR;
                 log.error("error executing agent", e);
                 try {
-                    sseEmitter.send("执行错误：" + e.getMessage());
+                    sseEmitter.send("Execution error: " + e.getMessage());
                     sseEmitter.send("[DONE]");
                     sseEmitter.complete();
                 } catch (IOException ex) {
@@ -240,7 +249,7 @@ public abstract class BaseAgent {
                     (org.springframework.ai.chat.messages.AssistantMessage) message;
                 String text = assistantMessage.getText();
                 // 确保文本不为空且不是工具调用相关的内部消息
-                if (StrUtil.isNotBlank(text) && !text.contains("思考完成")) {
+                if (text != null && StrUtil.isNotBlank(text) && !text.contains("[THINKING_END]")) {
                     return text;
                 }
             }
@@ -284,7 +293,7 @@ public abstract class BaseAgent {
         for (int i = 0; i < text.length(); i += chunkSize) {
             int end = Math.min(i + chunkSize, text.length());
             String chunk = text.substring(i, end);
-            sseEmitter.send(chunk);
+            sseEmitter.send(Objects.requireNonNull(chunk, "chunk"));
             
             // 添加微小延迟，使流式效果更自然
             try {
@@ -311,7 +320,7 @@ public abstract class BaseAgent {
     protected String generateMaxStepsSummary() {
         // 尝试从消息列表中提取工具返回的信息
         StringBuilder summary = new StringBuilder();
-        summary.append("经过 ").append(currentStep).append(" 步深度思考和工具调用，我为您整理了以下信息：\n\n");
+        summary.append("After ").append(currentStep).append(" rounds of reasoning and tool calls, here is what I found:\n\n");
         
         // 从消息历史中提取有用信息
         int infoCount = 0;
@@ -323,9 +332,9 @@ public abstract class BaseAgent {
                 for (var response : toolMsg.getResponses()) {
                     String data = response.responseData();
                     String formatted = extractToolSummary(data);
-                    if (StrUtil.isNotBlank(formatted)) {
-                        infoCount++;
-                        summary.append("• ").append(formatted);
+                        if (StrUtil.isNotBlank(formatted)) {
+                            infoCount++;
+                            summary.append("- ").append(formatted);
                         if (!formatted.endsWith("\n")) {
                             summary.append("\n");
                         }
@@ -338,7 +347,7 @@ public abstract class BaseAgent {
             return null; // 没有找到有用信息
         }
         
-        summary.append("\n如需更详细的信息，请提供更具体的查询条件。");
+        summary.append("\nIf you need more detail, please share a more specific follow-up question.");
         return summary.toString();
     }
 
@@ -350,23 +359,20 @@ public abstract class BaseAgent {
             return text;
         }
         String normalized = text.replace("\r\n", "\n");
-            normalized = normalized.replaceAll("\\*\\*([^*]+)\\*\\*", "$1");
-            normalized = normalized.replaceAll("`([^`]+)`", "$1");
-            normalized = normalized.replaceAll("(?m)^#{1,6}\\s*", "");
-            normalized = normalized.replaceAll("(?<!\\n)(\\d+\\.\\s)", "\n$1");
-            normalized = normalized.replaceAll("(?<!\\n)(第[一二三四五六七八九十百千万两0-9]+[、,，])", "\n$1");
-            normalized = normalized.replaceAll("：\\s*-", "：\n  - ");
-            normalized = normalized.replaceAll("(?<!\\n)-(\\s)", "\n  - $1");
-            normalized = normalized.replaceAll("(?<!\\n)([•·]\\s)", "\n  $1");
-            normalized = normalized.replaceAll("(?<!\\n)([\\u4e00-\\u9fa5A-Za-z0-9]+[:：])", "\n$1");
-            normalized = normalized.replaceAll("(?<!\\n)(课程基本信息|授课教师与班级信息|主要学习内容|相关建议|建议与选课指导|总体建议|课程亮点|学习建议|考试安排|推荐行程|出行建议|天气状况)", "\n\n$1");
-            normalized = normalized.replaceAll("(课程基本信息|授课教师与班级信息|主要学习内容|相关建议|建议与选课指导|总体建议|课程亮点|学习建议|考试安排|推荐行程|出行建议|天气状况)(?!\n)", "$1\n");
-            normalized = normalized.replaceAll("(?<!\\n)([\\u4e00-\\u9fa5]{2,}信息|建议与选课指导|主要学习内容|授课教师与班级信息|课程基本信息|推荐行程|出行建议|天气状况)([:：])", "\n\n$1$2");
-            normalized = normalized.replaceAll("(\n\s*)([0-9]+\\.\\s)", "$1$2");
+        normalized = normalized.replace("**", "");
+        normalized = normalized.replace("```", "");
+        normalized = normalized.replaceAll("`([^`]+)`", "$1");
+        normalized = normalized.replaceAll("(?m)^\\s*>+\\s*", "");
+        normalized = normalized.replaceAll("[\\u2013\\u2014]", "-");
+        normalized = normalized.replaceAll("(?m)^(\\s*)(\\d+\\.)(\\S)", "$1$2 $3");
+        normalized = normalized.replaceAll("(?m)^\\s*[-*]\\s+", "- ");
+        normalized = normalized.replaceAll("(?<!\\n)(-\\s+\\S)", "\n$1");
+        normalized = normalized.replaceAll("(?<!\\n)(\\d+\\.\\s+\\S)", "\n$1");
         normalized = isolateUrls(normalized);
         normalized = normalized.replaceAll("\n{3,}", "\n\n");
-        normalized = normalized.replaceAll("\s*\n\s*", "\n");
+        normalized = normalized.replaceAll("[\t\f]+", " ");
         normalized = normalized.replaceAll(" {2,}", " ");
+        normalized = normalized.replaceAll(" *\n *", "\n");
         normalized = normalized.trim();
         return normalized;
     }
@@ -379,9 +385,9 @@ public abstract class BaseAgent {
     protected void sendSseMessage(String message) {
         if (currentSseEmitter != null) {
             try {
-                currentSseEmitter.send(message);
+                currentSseEmitter.send(Objects.requireNonNull(message, "sseMessage"));
             } catch (IOException e) {
-                log.error("发送 SSE 消息失败", e);
+                log.error("Failed to send SSE message", e);
             }
         }
     }
@@ -395,6 +401,50 @@ public abstract class BaseAgent {
         this.currentStep = 0;
         // 注意：不清空 messageList，保留对话历史
         // 子类可以重写此方法来清理资源
+    }
+
+    /**
+     * 当推理迭代达到最大步数时，再次调用模型生成一个整合现有事实的Fallback回复。
+     *
+     * @param originalPrompt 用户原始问题
+     * @param collectedInsights 已收集的事实摘要，可能为 null
+     * @return 模型生成的最终英文回复；如果失败则返回原有摘要
+     */
+    protected String attemptFallbackCompletion(String originalPrompt, String collectedInsights) {
+        ChatClient client = getChatClient();
+        if (client == null) {
+            return collectedInsights;
+        }
+        String promptText = StrUtil.isNotBlank(originalPrompt) ? originalPrompt.trim() : "";
+        String insightText = StrUtil.isNotBlank(collectedInsights) ? collectedInsights.trim() : "";
+        if (StrUtil.isBlank(promptText) && StrUtil.isBlank(insightText)) {
+            return collectedInsights;
+        }
+        try {
+            StringBuilder builder = new StringBuilder();
+            if (StrUtil.isNotBlank(promptText)) {
+                builder.append("User question:\n").append(promptText).append("\n\n");
+            }
+            if (StrUtil.isNotBlank(insightText)) {
+                builder.append("Known findings:\n").append(insightText).append("\n\n");
+            } else {
+                builder.append("Known findings: None captured during tool calls.\n\n");
+            }
+            builder.append("Respond in English with a concise, structured answer. If information is missing, acknowledge the gap and suggest the next step.");
+
+                String userPayload = builder.toString();
+                ChatResponse response = client.prompt()
+                    .system("You are finalising a multi-step HKU assistant session. Use only the provided findings and be honest about any remaining gaps.")
+                    .user(Objects.requireNonNull(userPayload, "fallbackPayload"))
+                    .call()
+                    .chatResponse();
+            if (response != null && response.getResult() != null && response.getResult().getOutput() != null) {
+                return response.getResult().getOutput().getText();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to generate fallback completion", e);
+        }
+        return collectedInsights;
     }
 
     private String extractToolSummary(String raw) {

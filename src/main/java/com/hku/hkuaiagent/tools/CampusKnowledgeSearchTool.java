@@ -27,7 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 访问 HKU 向量知识库的工具，优先用于课程与校园信息检索。
+ * Tool that queries the HKU vector knowledge base, prioritising campus and course FAQs.
  */
 public class CampusKnowledgeSearchTool {
 
@@ -46,7 +46,7 @@ public class CampusKnowledgeSearchTool {
             @ToolParam(description = "Number of entries to return (default 3)", required = false) Integer topK
     ) {
         if (question == null || question.isBlank()) {
-            return "{\"summary\":\"问题内容为空，无法执行 HKU 知识库检索。\"}";
+            return "{\"summary\":\"Question is empty; unable to search the HKU knowledge base.\"}";
         }
         String courseCode = extractCourseCode(question);
         String rewritten = queryRewriter != null ? queryRewriter.doQueryRewrite(question) : question;
@@ -57,7 +57,7 @@ public class CampusKnowledgeSearchTool {
         boolean isCourseQuery = courseCode != null;
 
         if (vectorStore == null && !isCourseQuery) {
-            return "{\"summary\":\"HKU RAG knowledge base is not configured. 请启用 hku.ai.rag.enabled 或提供更具体的课程代码以返回本地资料。\"}";
+            return "{\"summary\":\"HKU RAG knowledge base is not configured. Enable hku.ai.rag.enabled or provide a specific course code to return local notes.\"}";
         }
 
         int defaultLimit = isCourseQuery ? 5 : 3;
@@ -72,7 +72,7 @@ public class CampusKnowledgeSearchTool {
                     .build()
             );
 
-            // 如果重写后的查询没有命中，尝试回退到原始问题
+            // Fallback to the original question if the rewritten query returns no hits
             if ((documents == null || documents.isEmpty()) && !safeQuery.equals(question)) {
                 documents = vectorStore.similaritySearch(
                     SearchRequest.builder()
@@ -89,12 +89,12 @@ public class CampusKnowledgeSearchTool {
 
         if (documents == null || documents.isEmpty()) {
             if (isCourseQuery) {
-                return "{\"summary\":\"未找到与课程" + courseCode + "相关的本地资料，请确认课程代码是否正确。\"}";
+                return "{\"summary\":\"No local material found for course " + courseCode + ". Please verify the course code.\"}";
             }
             if (vectorStore == null) {
-                return "{\"summary\":\"HKU RAG knowledge base is not configured. 请启用 hku.ai.rag.enabled 以检索更多信息。\"}";
+                return "{\"summary\":\"HKU RAG knowledge base is not configured. Enable hku.ai.rag.enabled to retrieve additional references.\"}";
             }
-            return "{\"summary\":\"未在 HKU 知识库中找到与问题直接匹配的资料。请尝试提供更多上下文。\"}";
+            return "{\"summary\":\"No direct match was found in the HKU knowledge base. Try providing more context.\"}";
         }
 
         ArrayNode sources = objectMapper.createArrayNode();
@@ -147,7 +147,7 @@ public class CampusKnowledgeSearchTool {
                 variantMap.putIfAbsent(entry.getKey(), entry.getValue());
             }
         } catch (IOException ignored) {
-            // 如果本地文件无法读取，也不阻塞正常返回
+            // Ignore failures when local files cannot be read; still return vector search results
         }
 
         List<Document> merged = new ArrayList<>();
@@ -216,7 +216,7 @@ public class CampusKnowledgeSearchTool {
                 return firstLine.trim();
             }
         }
-        return filename != null ? filename.replace(".md", "") : "HKU 资料";
+        return filename != null ? filename.replace(".md", "") : "HKU reference material";
     }
 
     private String extractVariant(Document document, String courseCode) {
@@ -272,7 +272,7 @@ public class CampusKnowledgeSearchTool {
 
     private String resolveTitle(Document document) {
         if (document == null || document.getMetadata() == null) {
-            return "HKU 资料";
+            return "HKU reference material";
         }
         Object title = document.getMetadata().get("title");
         if (title != null) {
@@ -282,7 +282,7 @@ public class CampusKnowledgeSearchTool {
         if (filename != null) {
             return String.valueOf(filename);
         }
-        return "HKU 资料";
+        return "HKU reference material";
     }
 
     private String buildSnippet(String text) {
@@ -290,6 +290,6 @@ public class CampusKnowledgeSearchTool {
             return "";
         }
         String normalized = text.replaceAll("\\s+", " ").trim();
-        return normalized.length() > 180 ? normalized.substring(0, 180) + "…" : normalized;
+        return normalized.length() > 180 ? normalized.substring(0, 180) + "..." : normalized;
     }
 }

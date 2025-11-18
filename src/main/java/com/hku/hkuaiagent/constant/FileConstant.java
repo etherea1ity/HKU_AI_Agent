@@ -1,12 +1,12 @@
 package com.hku.hkuaiagent.constant;
 
 /**
- * 文件常量
+ * Constants related to file handling.
  */
 public interface FileConstant {
 
     /**
-     * 文件保存目录
+     * Default directory where generated files are stored.
      */
     String FILE_SAVE_DIR = System.getProperty("user.dir") + "/tmp";
 }

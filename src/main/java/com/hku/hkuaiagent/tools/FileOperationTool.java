@@ -6,7 +6,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
 /**
- * 文件操作工具类（提供文件读写功能）
+ * File utility tool that exposes simple read/write helpers to the agent.
  */
 public class FileOperationTool {
 
@@ -29,7 +29,7 @@ public class FileOperationTool {
         String filePath = FILE_DIR + "/" + fileName;
 
         try {
-            // 创建目录
+            // Ensure the storage directory exists
             FileUtil.mkdir(FILE_DIR);
             FileUtil.writeUtf8String(content, filePath);
             return "File written successfully to: " + filePath;
